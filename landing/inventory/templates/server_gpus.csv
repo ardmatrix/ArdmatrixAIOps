@@ -1,0 +1,2 @@
+server_key,device_index,manufacturer,model,serial_number,pci_address,vram_bytes,driver_version,firmware_version,compute_capability
+customer-srv-002,0,NVIDIA,L40S,CUST-GPU-001,0000:41:00.0,51539607552,550.90,95.02.18.40.01,8.9

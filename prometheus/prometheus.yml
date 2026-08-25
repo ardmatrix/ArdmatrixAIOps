@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    platform: ardmatrix-aiops
+    environment: demo
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  - job_name: grafana
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["grafana:3000"]
+
+  - job_name: inventory-watcher
+    static_configs:
+      - targets: ["inventory-watcher:8000"]
+
+  - job_name: inventory-consumer
+    static_configs:
+      - targets: ["inventory-consumer:8000"]

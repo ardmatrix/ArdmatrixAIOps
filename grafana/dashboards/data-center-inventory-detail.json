@@ -1,0 +1,200 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "icon": "arrow-left",
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Back to Inventory Overview",
+      "type": "link",
+      "url": "/d/ardmatrix-inventory-overview/inventory-overview?orgId=1&${site:queryparam}"
+    },
+    {
+      "icon": "download-alt",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Download All Inventory (ZIP)",
+      "type": "link",
+      "url": "http://localhost:9103/export"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "description": "Consolidated current-state inventory. Applications and business services remain global until topology associates them with sites.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Details"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 420
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Asset"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 220
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 30,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": true,
+          "fields": "",
+          "reducer": [
+            "count"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Category"
+          },
+          {
+            "desc": false,
+            "displayName": "Asset"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH selected_sites AS (SELECT * FROM inventory.sites WHERE (${site:sqlstring} = 'All' OR site_key = ${site:sqlstring})), rack_context AS (SELECT r.id AS rack_id,r.rack_key,r.name AS rack_name,dr.name AS row_name,rm.name AS room_name,s.id AS site_id,s.site_key,s.name AS site_name,r.status,r.is_simulated FROM inventory.racks r JOIN inventory.data_center_rows dr ON dr.id=r.row_id JOIN inventory.rooms rm ON rm.id=dr.room_id JOIN selected_sites s ON s.id=rm.site_id), server_context AS (SELECT sv.*,rc.site_id,rc.site_key,rc.site_name,rc.rack_name FROM inventory.servers sv JOIN rack_context rc ON rc.rack_id=sv.rack_id), network_context AS (SELECT nd.*,rc.site_key,rc.site_name,rc.rack_name FROM inventory.network_devices nd JOIN rack_context rc ON rc.rack_id=nd.rack_id), vm_context AS (SELECT vm.*,h.hypervisor_key,sv.hostname AS host_name,sv.site_key,sv.site_name,sv.rack_name FROM inventory.virtual_machines vm JOIN inventory.hypervisors h ON h.id=vm.hypervisor_id JOIN server_context sv ON sv.id=h.server_id), items AS (SELECT 'Data Center'::text AS category,s.name AS asset,s.site_key AS asset_key,''::text AS parent,s.name AS site,''::text AS rack,s.status,concat('Type: ',s.site_type,' | Timezone: ',s.timezone) AS details,s.is_simulated FROM selected_sites s UNION ALL SELECT 'Rack',rc.rack_name,rc.rack_key,rc.row_name,rc.site_name,rc.rack_name,rc.status,concat('Room: ',rc.room_name,' | Row: ',rc.row_name,' | Rack units: ',r.rack_units,' | Max power: ',coalesce(r.max_power_watts::text,'n/a'),' W'),rc.is_simulated FROM rack_context rc JOIN inventory.racks r ON r.id=rc.rack_id UNION ALL SELECT 'Physical Server',sv.hostname,sv.server_key,sv.rack_name,sv.site_name,sv.rack_name,sv.status,concat(coalesce(sv.manufacturer,''),' ',coalesce(sv.model,''),' | OS: ',coalesce(sv.operating_system,''),' ',coalesce(sv.operating_system_version,'')),sv.is_simulated FROM server_context sv UNION ALL SELECT 'CPU',concat(sv.hostname,' / CPU ',cpu.socket_index),cpu.id::text,sv.hostname,sv.site_name,sv.rack_name,sv.status,concat(cpu.manufacturer,' ',cpu.model,' | ',cpu.physical_cores,' cores / ',cpu.logical_processors,' threads'),sv.is_simulated FROM inventory.cpu_devices cpu JOIN server_context sv ON sv.id=cpu.server_id UNION ALL SELECT 'Memory',concat(sv.hostname,' / ',m.slot),m.id::text,sv.hostname,sv.site_name,sv.rack_name,sv.status,concat(pg_size_pretty(m.capacity_bytes),' ',coalesce(m.memory_type,''),' @ ',coalesce(m.speed_mts::text,'n/a'),' MT/s'),sv.is_simulated FROM inventory.memory_modules m JOIN server_context sv ON sv.id=m.server_id UNION ALL SELECT 'GPU',concat(sv.hostname,' / GPU ',g.device_index),g.id::text,sv.hostname,sv.site_name,sv.rack_name,sv.status,concat(g.manufacturer,' ',g.model,' | VRAM: ',pg_size_pretty(g.vram_bytes),' | Driver: ',coalesce(g.driver_version,'n/a')),sv.is_simulated FROM inventory.gpu_devices g JOIN server_context sv ON sv.id=g.server_id UNION ALL SELECT 'Server Storage',concat(sv.hostname,' / ',d.device_name),d.id::text,sv.hostname,sv.site_name,sv.rack_name,d.status,concat(coalesce(d.manufacturer,''),' ',coalesce(d.model,''),' | ',pg_size_pretty(d.capacity_bytes),' | ',coalesce(d.media_type,'')),sv.is_simulated FROM inventory.storage_devices d JOIN server_context sv ON sv.id=d.server_id UNION ALL SELECT 'Network Device',nd.hostname,nd.device_key,nd.rack_name,nd.site_name,nd.rack_name,nd.status,concat(nd.device_type,' / ',coalesce(nd.role,''),' | ',coalesce(nd.manufacturer,''),' ',coalesce(nd.model,''),' | Mgmt: ',coalesce(nd.management_address::text,'n/a')),nd.is_simulated FROM network_context nd UNION ALL SELECT 'Server Interface',concat(sv.hostname,' / ',ni.interface_name),ni.id::text,sv.hostname,sv.site_name,sv.rack_name,coalesce(ni.administrative_status,'unknown'),concat('MAC: ',coalesce(ni.mac_address::text,'n/a'),' | IP: ',array_to_string(ni.ip_addresses,', '),' | Speed: ',coalesce((ni.speed_bps/1000000000)::text,'n/a'),' Gbps'),sv.is_simulated FROM inventory.network_interfaces ni JOIN server_context sv ON sv.id=ni.server_id UNION ALL SELECT 'Network Interface',concat(nd.hostname,' / ',ni.interface_name),ni.id::text,nd.hostname,nd.site_name,nd.rack_name,coalesce(ni.administrative_status,'unknown'),concat('MAC: ',coalesce(ni.mac_address::text,'n/a'),' | IP: ',array_to_string(ni.ip_addresses,', '),' | Speed: ',coalesce((ni.speed_bps/1000000000)::text,'n/a'),' Gbps'),nd.is_simulated FROM inventory.network_interfaces ni JOIN network_context nd ON nd.id=ni.network_device_id UNION ALL SELECT 'Hypervisor',h.hypervisor_key,h.id::text,sv.hostname,sv.site_name,sv.rack_name,h.status,concat(h.hypervisor_type,' ',coalesce(h.version,''),' | Cluster: ',coalesce(h.cluster_name,'n/a')),h.is_simulated FROM inventory.hypervisors h JOIN server_context sv ON sv.id=h.server_id UNION ALL SELECT 'Virtual Machine',vm.name,vm.vm_key,vm.host_name,vm.site_name,vm.rack_name,vm.status,concat(vm.vcpu_count,' vCPU | RAM: ',pg_size_pretty(vm.memory_bytes),' | Storage: ',pg_size_pretty(vm.provisioned_storage_bytes),' | IP: ',array_to_string(vm.ip_addresses,', ')),vm.is_simulated FROM vm_context vm UNION ALL SELECT 'Storage System',st.name,st.storage_key,coalesce(rc.rack_name,''),s.name,coalesce(rc.rack_name,''),st.status,concat(st.storage_type,' | ',coalesce(st.manufacturer,''),' ',coalesce(st.model,''),' | Usable: ',coalesce(pg_size_pretty(st.usable_capacity_bytes),'n/a')),st.is_simulated FROM inventory.storage_systems st JOIN selected_sites s ON s.id=st.site_id LEFT JOIN rack_context rc ON rc.rack_id=st.rack_id UNION ALL SELECT 'Kubernetes Cluster',kc.name,kc.cluster_key,'',s.name,'',kc.status,concat(coalesce(kc.distribution,''),' ',coalesce(kc.version,'')),kc.is_simulated FROM inventory.k8s_clusters kc JOIN selected_sites s ON s.id=kc.site_id UNION ALL SELECT 'Kubernetes Node',kn.name,kn.node_uid,kc.name,s.name,'',kn.status,concat(kn.role,' | CPU: ',coalesce(kn.cpu_capacity_millicores::text,'n/a'),'m | RAM: ',coalesce(pg_size_pretty(kn.memory_capacity_bytes),'n/a'),' | GPUs: ',kn.gpu_capacity),kn.is_simulated FROM inventory.k8s_nodes kn JOIN inventory.k8s_clusters kc ON kc.id=kn.cluster_id JOIN selected_sites s ON s.id=kc.site_id UNION ALL SELECT 'Kubernetes Namespace',ns.name,ns.namespace_uid,kc.name,s.name,'',ns.status,'Namespace',ns.is_simulated FROM inventory.k8s_namespaces ns JOIN inventory.k8s_clusters kc ON kc.id=ns.cluster_id JOIN selected_sites s ON s.id=kc.site_id UNION ALL SELECT 'Kubernetes Workload',kw.name,kw.workload_uid,ns.name,s.name,'','active',concat(kw.workload_type,' | Desired: ',coalesce(kw.desired_replicas::text,'n/a'),' | Available: ',coalesce(kw.available_replicas::text,'n/a')),kw.is_simulated FROM inventory.k8s_workloads kw JOIN inventory.k8s_namespaces ns ON ns.id=kw.namespace_id JOIN inventory.k8s_clusters kc ON kc.id=ns.cluster_id JOIN selected_sites s ON s.id=kc.site_id UNION ALL SELECT 'Kubernetes Pod',kp.name,kp.pod_uid,coalesce(kw.name,ns.name),s.name,'',kp.phase,concat('IP: ',coalesce(kp.pod_ip::text,'n/a'),' | QoS: ',coalesce(kp.qos_class,'n/a')),kp.is_simulated FROM inventory.k8s_pods kp JOIN inventory.k8s_namespaces ns ON ns.id=kp.namespace_id JOIN inventory.k8s_clusters kc ON kc.id=ns.cluster_id JOIN selected_sites s ON s.id=kc.site_id LEFT JOIN inventory.k8s_workloads kw ON kw.id=kp.workload_id UNION ALL SELECT 'Container',ct.name,ct.container_key,kp.name,s.name,'',ct.status,concat(ct.image,' | CPU limit: ',coalesce(ct.cpu_limit_millicores::text,'n/a'),'m | Memory limit: ',coalesce(pg_size_pretty(ct.memory_limit_bytes),'n/a')),ct.is_simulated FROM inventory.k8s_containers ct JOIN inventory.k8s_pods kp ON kp.id=ct.pod_id JOIN inventory.k8s_namespaces ns ON ns.id=kp.namespace_id JOIN inventory.k8s_clusters kc ON kc.id=ns.cluster_id JOIN selected_sites s ON s.id=kc.site_id UNION ALL SELECT 'Application',a.name,a.application_key,coalesce(o.name,''),'Enterprise / Cross-site','',a.status,concat('Type: ',coalesce(a.application_type,'n/a'),' | Environment: ',a.environment,' | Version: ',coalesce(a.version,'n/a'),' | Criticality: ',a.criticality,' | Owner: ',coalesce(o.name,'unassigned')),a.is_simulated FROM inventory.applications a JOIN inventory.application_sites aps ON aps.application_id=a.id JOIN selected_sites app_site ON app_site.id=aps.site_id LEFT JOIN inventory.owners o ON o.id=a.owner_id) SELECT category AS \"Category\",asset AS \"Asset\",asset_key AS \"Inventory Key\",parent AS \"Parent\",coalesce(server_meta.hostname,rack_servers.hostnames,'') AS \"Server Hostname\",coalesce(server_meta.id::text,rack_servers.server_ids,'') AS \"Server ID\",coalesce(server_meta.server_key,rack_servers.server_keys,'') AS \"Server Key\",hardware.cpu_count AS \"CPU Count\",coalesce(hardware.cpu_models,'') AS \"CPU Model\",hardware.cpu_cores AS \"CPU Cores\",hardware.cpu_threads AS \"CPU Threads\",coalesce(hardware.ram,'') AS \"RAM\",coalesce(hardware.gpu_models,'') AS \"GPU Model\",hardware.gpu_count AS \"GPU Count\",coalesce(hardware.vram,'') AS \"VRAM\",coalesce(hardware.local_storage,'') AS \"Local Storage\",coalesce(hardware.network_interfaces,'') AS \"Network Interfaces\",items.site AS \"Data Center\",items.rack AS \"Rack\",items.status AS \"Status\",items.details AS \"Details\",CASE WHEN items.is_simulated THEN 'Simulated' ELSE 'Live' END AS \"Data Type\" FROM items LEFT JOIN inventory.servers server_meta ON server_meta.hostname = CASE WHEN items.category = 'Physical Server' THEN items.asset WHEN items.category IN ('CPU','Memory','GPU','Server Storage','Server Interface','Hypervisor','Virtual Machine') THEN items.parent ELSE NULL END LEFT JOIN LATERAL (SELECT string_agg(rack_server.hostname, ', ' ORDER BY rack_server.hostname) AS hostnames,string_agg(rack_server.id::text, ', ' ORDER BY rack_server.hostname) AS server_ids,string_agg(rack_server.server_key, ', ' ORDER BY rack_server.hostname) AS server_keys FROM inventory.servers rack_server JOIN inventory.racks rack_lookup ON rack_lookup.id=rack_server.rack_id JOIN inventory.data_center_rows rack_row ON rack_row.id=rack_lookup.row_id JOIN inventory.rooms rack_room ON rack_room.id=rack_row.room_id JOIN inventory.sites rack_site ON rack_site.id=rack_room.site_id WHERE items.category='Rack' AND rack_lookup.name=items.rack AND rack_site.name=items.site) rack_servers ON true LEFT JOIN LATERAL (SELECT (SELECT count(*) FROM inventory.cpu_devices cpu WHERE cpu.server_id=server_meta.id) AS cpu_count,(SELECT string_agg(concat_ws(' ',cpu.manufacturer,cpu.model), ', ' ORDER BY cpu.socket_index) FROM inventory.cpu_devices cpu WHERE cpu.server_id=server_meta.id) AS cpu_models,(SELECT sum(cpu.physical_cores) FROM inventory.cpu_devices cpu WHERE cpu.server_id=server_meta.id) AS cpu_cores,(SELECT sum(cpu.logical_processors) FROM inventory.cpu_devices cpu WHERE cpu.server_id=server_meta.id) AS cpu_threads,(SELECT pg_size_pretty(sum(memory.capacity_bytes)::bigint) FROM inventory.memory_modules memory WHERE memory.server_id=server_meta.id) AS ram,(SELECT string_agg(concat_ws(' ',gpu.manufacturer,gpu.model), ', ' ORDER BY gpu.device_index) FROM inventory.gpu_devices gpu WHERE gpu.server_id=server_meta.id) AS gpu_models,(SELECT count(*) FROM inventory.gpu_devices gpu WHERE gpu.server_id=server_meta.id) AS gpu_count,(SELECT pg_size_pretty(coalesce(sum(gpu.vram_bytes),0)::bigint) FROM inventory.gpu_devices gpu WHERE gpu.server_id=server_meta.id) AS vram,(SELECT pg_size_pretty(coalesce(sum(storage.capacity_bytes),0)::bigint) FROM inventory.storage_devices storage WHERE storage.server_id=server_meta.id) AS local_storage,(SELECT string_agg(concat(interface.interface_name,coalesce(' (' || array_to_string(interface.ip_addresses,', ') || ')','')), ', ' ORDER BY interface.interface_name) FROM inventory.network_interfaces interface WHERE interface.server_id=server_meta.id) AS network_interfaces) hardware ON items.category='Physical Server' WHERE (${category:sqlstring} = 'All' OR category = ${category:sqlstring}) ORDER BY category,site,rack,asset",
+          "refId": "A"
+        }
+      ],
+      "title": "Complete Data Center Inventory",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": [
+    "ardmatrix",
+    "aiops",
+    "inventory",
+    "drilldown"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": "'All'",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "All"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "timescaledb"
+        },
+        "definition": "SELECT site_key AS __value, name AS __text FROM inventory.sites ORDER BY name",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Data Center",
+        "multi": false,
+        "name": "site",
+        "options": [],
+        "query": "SELECT site_key AS __value, name AS __text FROM inventory.sites ORDER BY name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "All inventory",
+          "value": "All"
+        },
+        "hide": 2,
+        "label": "Inventory Category",
+        "name": "category",
+        "options": [
+          {"selected": true, "text": "All inventory", "value": "All"},
+          {"selected": false, "text": "Racks", "value": "Rack"},
+          {"selected": false, "text": "Physical Servers", "value": "Physical Server"},
+          {"selected": false, "text": "Virtual Machines", "value": "Virtual Machine"},
+          {"selected": false, "text": "Kubernetes Pods", "value": "Kubernetes Pod"},
+          {"selected": false, "text": "Applications", "value": "Application"}
+        ],
+        "query": "All : All,Racks : Rack,Physical Servers : Physical Server,Virtual Machines : Virtual Machine,Kubernetes Pods : Kubernetes Pod,Applications : Application",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Data Center Inventory Detail",
+  "uid": "ardmatrix-dc-inventory-detail",
+  "version": 1,
+  "weekStart": ""
+}

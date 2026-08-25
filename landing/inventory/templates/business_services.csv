@@ -1,0 +1,2 @@
+service_key,name,description,criticality,service_tier,owner_key,status
+customer-crm-service,Customer CRM Business Service,Customer relationship management business capability,critical,tier-1,customer-app-team,active

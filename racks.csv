@@ -1,0 +1,2 @@
+site_key,room_key,row_key,rack_key,name,rack_units,max_power_watts,status
+customer-dc-01,hall-a,row-a,rack-a01,CUST-BLR-A05,42,12000,active

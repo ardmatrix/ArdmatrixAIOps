@@ -1,0 +1,2 @@
+cluster_key,name,site_key,distribution,version,api_endpoint,status,owner_key,source_native_id
+customer-k8s-prod,Customer Production Cluster,customer-dc-01,k3s,v1.33,https://customer-k8s.example.invalid:6443,active,customer-platform,cust-k8s-prod

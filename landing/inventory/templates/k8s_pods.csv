@@ -1,0 +1,3 @@
+cluster_key,namespace_name,pod_uid,name,node_name,workload_uid,phase,pod_ip,qos_class,restart_policy,labels
+customer-k8s-prod,crm,cust-pod-uid-web-01,crm-web-01,customer-worker-01,cust-deployment-uid-web,Running,10.52.0.11,Burstable,Always,"{""app"":""crm-web""}"
+customer-k8s-prod,crm,cust-pod-uid-api-01,crm-api-01,customer-worker-01,cust-deployment-uid-api,Running,10.52.0.21,Burstable,Always,"{""app"":""crm-api""}"

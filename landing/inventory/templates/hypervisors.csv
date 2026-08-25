@@ -1,0 +1,2 @@
+hypervisor_key,server_key,hypervisor_type,version,cluster_name,status,source_native_id
+customer-esxi-001,customer-srv-001,VMware ESXi,8.0,Customer Compute Cluster,active,cust-esxi-001

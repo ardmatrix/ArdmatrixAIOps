@@ -1,0 +1,3 @@
+segment_key,name,site_key,segment_type,vlan_id,cidr,gateway,vrf_name
+customer-server-vlan,Customer Server VLAN,customer-dc-01,vlan,150,10.50.10.0/24,10.50.10.1,customer-prod
+customer-management-vlan,Customer Management VLAN,customer-dc-01,vlan,151,10.50.0.0/24,10.50.0.1,customer-management

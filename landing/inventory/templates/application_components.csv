@@ -1,0 +1,4 @@
+application_key,component_key,name,component_type,version,runtime,listen_endpoints,status
+customer-crm-app,crm-web,CRM Web,web,1.0,nginx,"[{""port"":8080,""protocol"":""http""}]",active
+customer-crm-app,crm-api,CRM API,api,1.0,python,"[{""port"":8080,""protocol"":""http""}]",active
+customer-crm-app,crm-db,CRM Database,database,17,postgresql,"[{""port"":5432,""protocol"":""tcp""}]",active

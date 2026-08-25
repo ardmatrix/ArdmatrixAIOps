@@ -1,0 +1,246 @@
+name: ${COMPOSE_PROJECT_NAME:-ardmatrix-aiops}
+
+services:
+  timescaledb:
+    image: ${TIMESCALE_IMAGE:-timescale/timescaledb:latest-pg17}
+    container_name: ardmatrix-timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-aiops}
+      POSTGRES_USER: ${POSTGRES_USER:-aiops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_INITDB_ARGS: --data-checksums
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - aiops
+
+  kafka:
+    image: ${KAFKA_IMAGE:-apache/kafka:4.1.1}
+    container_name: ardmatrix-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:19092,CONTROLLER://:19093,EXTERNAL://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:19092,EXTERNAL://localhost:${KAFKA_PORT:-9092}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:19093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:19092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    networks:
+      - aiops
+
+  kafka-init:
+    image: ${KAFKA_IMAGE:-apache/kafka:4.1.1}
+    container_name: ardmatrix-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-ec"]
+    command:
+      - |
+        for topic in \
+            server.metrics network.metrics kubernetes.metrics application.metrics \
+            inventory.events topology.events alerts.events anomalies.events \
+            ai.findings rca.events; do
+          /opt/kafka/bin/kafka-topics.sh \
+            --bootstrap-server kafka:19092 \
+            --create --if-not-exists \
+            --topic "$${topic}" \
+            --partitions 3 \
+            --replication-factor 1
+        done
+    restart: "no"
+    networks:
+      - aiops
+
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v3.5.0}
+    container_name: ardmatrix-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=2GB
+      - --web.enable-lifecycle
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - aiops
+
+  grafana:
+    build:
+      context: ./grafana
+      dockerfile: Dockerfile
+    image: ardmatrix/grafana-branded:12.1.1
+    container_name: ardmatrix-grafana
+    restart: unless-stopped
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_SERVER_INSTANCE_NAME: "ARDMATRIX AIOps"
+      POSTGRES_DB: ${POSTGRES_DB:-aiops}
+      POSTGRES_USER: ${POSTGRES_USER:-aiops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - aiops
+
+  inventory-watcher:
+    build:
+      context: ./ingestion
+    image: ardmatrix/inventory-ingestion:local
+    container_name: ardmatrix-inventory-watcher
+    restart: unless-stopped
+    command: ["python", "-m", "app.watcher"]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aiops}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-aiops}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      KAFKA_TOPIC: inventory.events
+      LANDING_ROOT: /landing/inventory
+      POLL_SECONDS: ${INVENTORY_POLL_SECONDS:-3}
+      STABLE_SCANS: ${INVENTORY_STABLE_SCANS:-2}
+      METRICS_PORT: 8000
+    ports:
+      - "127.0.0.1:${INVENTORY_WATCHER_METRICS_PORT:-9101}:8000"
+    volumes:
+      - ./landing/inventory:/landing/inventory
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/metrics', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - aiops
+
+  inventory-consumer:
+    image: ardmatrix/inventory-ingestion:local
+    container_name: ardmatrix-inventory-consumer
+    restart: unless-stopped
+    command: ["python", "-m", "app.consumer"]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      inventory-watcher:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aiops}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-aiops}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      KAFKA_TOPIC: inventory.events
+      METRICS_PORT: 8000
+    ports:
+      - "127.0.0.1:${INVENTORY_CONSUMER_METRICS_PORT:-9102}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/metrics', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - aiops
+
+  inventory-exporter:
+    build:
+      context: ./ingestion
+    image: ardmatrix/inventory-ingestion:local
+    container_name: ardmatrix-inventory-exporter
+    restart: unless-stopped
+    user: "0:0"
+    command: ["python", "-m", "app.exporter"]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aiops}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-aiops}
+      EXPORT_ROOT: /exports/inventory
+      EXPORT_PORT: 8000
+    ports:
+      - "127.0.0.1:${INVENTORY_EXPORTER_PORT:-9103}:8000"
+    volumes:
+      - ./exports/inventory:/exports/inventory
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - aiops
+
+networks:
+  aiops:
+    name: ardmatrix-aiops
+    driver: bridge
+
+volumes:
+  timescale-data:
+  kafka-data:
+  prometheus-data:
+  grafana-data:

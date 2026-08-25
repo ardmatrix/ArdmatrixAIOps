@@ -1,0 +1,4 @@
+owner_key,name,owner_type,contact_email
+customer-dc-ops,Customer Data Center Operations,team,dc-ops@example.invalid
+customer-platform,Customer Platform Engineering,team,platform@example.invalid
+customer-app-team,Customer Application Team,team,apps@example.invalid

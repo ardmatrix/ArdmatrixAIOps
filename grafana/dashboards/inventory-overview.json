@@ -1,0 +1,173 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [{"icon": "download-alt", "includeVars": false, "keepTime": false, "tags": [], "targetBlank": false, "title": "Download All Inventory (ZIP)", "type": "link", "url": "http://localhost:9103/export"}],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "links": [{"targetBlank": true, "title": "Open complete data-center inventory", "url": "/d/ardmatrix-dc-inventory-detail/data-center-inventory-detail?orgId=1&${site:queryparam}&var-category=All"}], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"datasource": {"type": "postgres", "uid": "timescaledb"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Data Centers\" FROM inventory.sites WHERE (${site:sqlstring} = 'All' OR site_key = ${site:sqlstring})", "refId": "A"}],
+      "title": "🏢 Data Centers",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "links": [{"targetBlank": true, "title": "Open rack inventory", "url": "/d/ardmatrix-dc-inventory-detail/data-center-inventory-detail?orgId=1&${site:queryparam}&var-category=Rack"}], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Racks\" FROM inventory.racks r JOIN inventory.data_center_rows dr ON dr.id=r.row_id JOIN inventory.rooms rm ON rm.id=dr.room_id JOIN inventory.sites s ON s.id=rm.site_id WHERE (${site:sqlstring} = 'All' OR s.site_key = ${site:sqlstring})", "refId": "A"}],
+      "title": "🗄️ Racks",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "links": [{"targetBlank": true, "title": "Open physical-server inventory", "url": "/d/ardmatrix-dc-inventory-detail/data-center-inventory-detail?orgId=1&${site:queryparam}&var-category=Physical%20Server"}], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Servers\" FROM inventory.servers sv LEFT JOIN inventory.racks r ON r.id=sv.rack_id LEFT JOIN inventory.data_center_rows dr ON dr.id=r.row_id LEFT JOIN inventory.rooms rm ON rm.id=dr.room_id LEFT JOIN inventory.sites s ON s.id=rm.site_id WHERE (${site:sqlstring} = 'All' OR s.site_key = ${site:sqlstring})", "refId": "A"}],
+      "title": "🖥️ Physical Servers",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "links": [{"targetBlank": true, "title": "Open virtual-machine inventory", "url": "/d/ardmatrix-dc-inventory-detail/data-center-inventory-detail?orgId=1&${site:queryparam}&var-category=Virtual%20Machine"}], "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "id": 4,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Virtual Machines\" FROM inventory.virtual_machines vm JOIN inventory.hypervisors h ON h.id=vm.hypervisor_id JOIN inventory.servers sv ON sv.id=h.server_id JOIN inventory.racks r ON r.id=sv.rack_id JOIN inventory.data_center_rows dr ON dr.id=r.row_id JOIN inventory.rooms rm ON rm.id=dr.room_id JOIN inventory.sites s ON s.id=rm.site_id WHERE (${site:sqlstring} = 'All' OR s.site_key = ${site:sqlstring})", "refId": "A"}],
+      "title": "💻 Virtual Machines",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "links": [{"targetBlank": true, "title": "Open Kubernetes pod inventory", "url": "/d/ardmatrix-dc-inventory-detail/data-center-inventory-detail?orgId=1&${site:queryparam}&var-category=Kubernetes%20Pod"}], "thresholds": {"mode": "absolute", "steps": [{"color": "purple", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
+      "id": 5,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Kubernetes Pods\" FROM inventory.k8s_pods p JOIN inventory.k8s_namespaces ns ON ns.id=p.namespace_id JOIN inventory.k8s_clusters c ON c.id=ns.cluster_id JOIN inventory.sites s ON s.id=c.site_id WHERE (${site:sqlstring} = 'All' OR s.site_key = ${site:sqlstring})", "refId": "A"}],
+      "title": "☸ Kubernetes Pods",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "links": [{"targetBlank": true, "title": "Open application inventory", "url": "/d/ardmatrix-dc-inventory-detail/data-center-inventory-detail?orgId=1&${site:queryparam}&var-category=Application"}], "thresholds": {"mode": "absolute", "steps": [{"color": "orange", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
+      "id": 6,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(DISTINCT a.id) AS \"Applications\" FROM inventory.applications a LEFT JOIN inventory.application_sites aps ON aps.application_id=a.id LEFT JOIN inventory.sites s ON s.id=aps.site_id WHERE (${site:sqlstring} = 'All' OR s.site_key = ${site:sqlstring})", "refId": "A"}],
+      "title": "◆ Applications",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "blue", "value": 2}]}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 4},
+      "id": 7,
+      "options": {"basemap": {"config": {"showLabels": true, "theme": "auto"}, "name": "Base map", "type": "default"}, "controls": {"mouseWheelZoom": true, "showAttribution": true, "showDebug": false, "showMeasure": false, "showScale": true, "showZoom": true}, "layers": [{"config": {"showLegend": true, "style": {"color": {"fixed": "semi-dark-blue"}, "opacity": 0.85, "rotation": {"fixed": 0, "max": 360, "min": -360, "mode": "mod"}, "size": {"field": "Server Count", "fixed": 10, "max": 40, "min": 6}}}, "location": {"latitude": "latitude", "longitude": "longitude", "mode": "coords"}, "name": "Data Centers", "tooltip": true, "type": "markers"}], "tooltip": {"mode": "details"}, "view": {"allLayers": true, "id": "fit", "lat": 20.5937, "lon": 78.9629, "zoom": 4}},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT s.name AS \"Data Center\",s.latitude::double precision AS latitude,s.longitude::double precision AS longitude,count(DISTINCT r.id)::bigint AS \"Rack Count\",count(DISTINCT sv.id)::bigint AS \"Server Count\",CASE WHEN s.is_simulated THEN 'Simulated' ELSE 'Live' END AS \"Data Type\" FROM inventory.sites s LEFT JOIN inventory.rooms rm ON rm.site_id=s.id LEFT JOIN inventory.data_center_rows dr ON dr.room_id=rm.id LEFT JOIN inventory.racks r ON r.row_id=dr.id LEFT JOIN inventory.servers sv ON sv.rack_id=r.id WHERE s.latitude IS NOT NULL AND s.longitude IS NOT NULL AND (${site:sqlstring} = 'All' OR s.site_key = ${site:sqlstring}) GROUP BY s.id,s.name,s.latitude,s.longitude,s.is_simulated ORDER BY s.name", "refId": "A"}],
+      "title": "Data Center Server Map",
+      "type": "geomap"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}, "filterable": true}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 16, "x": 8, "y": 4},
+      "id": 8,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true, "sortBy": []},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT s.name AS \"Data Center\", r.name AS \"Rack\", sv.hostname AS \"Server\", sv.manufacturer AS \"Vendor\", sv.model AS \"Model\", sv.operating_system AS \"OS\", sc.physical_cores AS \"CPU Cores\", pg_size_pretty(sc.ram_bytes) AS \"RAM\", sc.gpu_count AS \"GPUs\", pg_size_pretty(sc.vram_bytes) AS \"VRAM\", pg_size_pretty(sc.local_storage_bytes) AS \"Storage\", sv.status AS \"Status\", CASE WHEN sv.is_simulated THEN 'Simulated' ELSE 'Live' END AS \"Data Type\" FROM inventory.servers sv JOIN inventory.server_capacity sc ON sc.id=sv.id LEFT JOIN inventory.racks r ON r.id=sv.rack_id LEFT JOIN inventory.data_center_rows dr ON dr.id=r.row_id LEFT JOIN inventory.rooms rm ON rm.id=dr.room_id LEFT JOIN inventory.sites s ON s.id=rm.site_id WHERE (${site:sqlstring} = 'All' OR s.site_key = ${site:sqlstring}) ORDER BY s.name, r.name, sv.hostname", "refId": "A"}],
+      "title": "Server Hardware Inventory",
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}, "filterable": true}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "id": 9,
+      "options": {"cellHeight": "sm", "footer": {"show": false}, "showHeader": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT s.name AS \"Data Center\", vm.name AS \"VM\", vm.hostname AS \"Hostname\", h.hypervisor_type AS \"Hypervisor\", sv.hostname AS \"Physical Host\", vm.vcpu_count AS \"vCPU\", pg_size_pretty(vm.memory_bytes) AS \"RAM\", pg_size_pretty(vm.provisioned_storage_bytes) AS \"Provisioned Storage\", vm.operating_system AS \"OS\", vm.status AS \"Status\", CASE WHEN vm.is_simulated THEN 'Simulated' ELSE 'Live' END AS \"Data Type\" FROM inventory.virtual_machines vm JOIN inventory.hypervisors h ON h.id=vm.hypervisor_id JOIN inventory.servers sv ON sv.id=h.server_id JOIN inventory.racks r ON r.id=sv.rack_id JOIN inventory.data_center_rows dr ON dr.id=r.row_id JOIN inventory.rooms rm ON rm.id=dr.room_id JOIN inventory.sites s ON s.id=rm.site_id WHERE (${site:sqlstring} = 'All' OR s.site_key = ${site:sqlstring}) ORDER BY s.name,vm.name", "refId": "A"}],
+      "title": "Virtualization Inventory",
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}, "filterable": true}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "id": 10,
+      "options": {"cellHeight": "sm", "footer": {"show": false}, "showHeader": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT s.name AS \"Data Center\", c.name AS \"Cluster\", n.name AS \"Node\", ns.name AS \"Namespace\", w.workload_type AS \"Kind\", w.name AS \"Workload\", p.name AS \"Pod\", p.phase AS \"Phase\", kc.name AS \"Container\", kc.image AS \"Image\", CASE WHEN p.is_simulated THEN 'Simulated' ELSE 'Live' END AS \"Data Type\" FROM inventory.k8s_pods p JOIN inventory.k8s_namespaces ns ON ns.id=p.namespace_id JOIN inventory.k8s_clusters c ON c.id=ns.cluster_id JOIN inventory.sites s ON s.id=c.site_id LEFT JOIN inventory.k8s_nodes n ON n.id=p.node_id LEFT JOIN inventory.k8s_workloads w ON w.id=p.workload_id LEFT JOIN inventory.k8s_containers kc ON kc.pod_id=p.id WHERE (${site:sqlstring} = 'All' OR s.site_key = ${site:sqlstring}) ORDER BY s.name,c.name,ns.name,p.name,kc.name", "refId": "A"}],
+      "title": "Kubernetes Inventory",
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}, "filterable": true}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+      "id": 11,
+      "options": {"cellHeight": "sm", "footer": {"show": false}, "showHeader": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT s.name AS \"Data Center\", nd.hostname AS \"Device\", nd.device_type AS \"Type\", nd.role AS \"Role\", nd.manufacturer AS \"Vendor\", nd.model AS \"Model\", nd.management_address::text AS \"Management IP\", r.name AS \"Rack\", nd.status AS \"Status\", CASE WHEN nd.is_simulated THEN 'Simulated' ELSE 'Live' END AS \"Data Type\" FROM inventory.network_devices nd JOIN inventory.racks r ON r.id=nd.rack_id JOIN inventory.data_center_rows dr ON dr.id=r.row_id JOIN inventory.rooms rm ON rm.id=dr.room_id JOIN inventory.sites s ON s.id=rm.site_id WHERE (${site:sqlstring} = 'All' OR s.site_key = ${site:sqlstring}) ORDER BY s.name,nd.hostname", "refId": "A"}],
+      "title": "Network Inventory",
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}, "filterable": true}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+      "id": 12,
+      "options": {"cellHeight": "sm", "footer": {"show": false}, "showHeader": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT s.name AS \"Data Center\", a.name AS \"Application\", a.environment AS \"Environment\", a.criticality AS \"Criticality\", ac.name AS \"Component\", ac.component_type AS \"Type\", ac.runtime AS \"Runtime\", ac.version AS \"Version\", a.status AS \"Status\", CASE WHEN a.is_simulated THEN 'Simulated' ELSE 'Live' END AS \"Data Type\" FROM inventory.applications a JOIN inventory.application_sites aps ON aps.application_id=a.id JOIN inventory.sites s ON s.id=aps.site_id LEFT JOIN inventory.application_components ac ON ac.application_id=a.id WHERE (${site:sqlstring} = 'All' OR s.site_key = ${site:sqlstring}) ORDER BY s.name,a.name,ac.name", "refId": "A"}],
+      "title": "Application Inventory",
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}, "filterable": true}}, "overrides": []},
+      "gridPos": {"h": 7, "w": 24, "x": 0, "y": 28},
+      "id": 13,
+      "options": {"cellHeight": "sm", "footer": {"show": false}, "showHeader": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH selected_sites AS (SELECT id FROM inventory.sites WHERE (${site:sqlstring} = 'All' OR site_key = ${site:sqlstring})), selected_racks AS (SELECT r.id FROM inventory.racks r JOIN inventory.data_center_rows dr ON dr.id=r.row_id JOIN inventory.rooms rm ON rm.id=dr.room_id JOIN selected_sites s ON s.id=rm.site_id), selected_servers AS (SELECT sv.id FROM inventory.servers sv JOIN selected_racks r ON r.id=sv.rack_id), selected_hypervisors AS (SELECT h.id FROM inventory.hypervisors h JOIN selected_servers sv ON sv.id=h.server_id), selected_clusters AS (SELECT c.id FROM inventory.k8s_clusters c JOIN selected_sites s ON s.id=c.site_id) SELECT * FROM (SELECT 'Data Centers'::text AS \"Entity Type\",(SELECT count(*) FROM selected_sites)::bigint AS \"Count\" UNION ALL SELECT 'Racks',(SELECT count(*) FROM selected_racks)::bigint UNION ALL SELECT 'Physical Servers',(SELECT count(*) FROM selected_servers)::bigint UNION ALL SELECT 'Virtual Machines',(SELECT count(*) FROM inventory.virtual_machines vm JOIN selected_hypervisors h ON h.id=vm.hypervisor_id)::bigint UNION ALL SELECT 'Network Devices',(SELECT count(*) FROM inventory.network_devices nd JOIN selected_racks r ON r.id=nd.rack_id)::bigint UNION ALL SELECT 'Kubernetes Pods',(SELECT count(*) FROM inventory.k8s_pods p JOIN inventory.k8s_namespaces ns ON ns.id=p.namespace_id JOIN selected_clusters c ON c.id=ns.cluster_id)::bigint UNION ALL SELECT 'Applications',(SELECT count(DISTINCT aps.application_id) FROM inventory.application_sites aps JOIN selected_sites s ON s.id=aps.site_id)::bigint) coverage ORDER BY \"Entity Type\"", "refId": "A"}],
+      "title": "Inventory Coverage",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["ardmatrix", "aiops", "inventory", "simulated-data"],
+  "templating": {
+    "list": [
+      {
+        "allValue": "'All'",
+        "current": {"selected": true, "text": "All", "value": "All"},
+        "datasource": {"type": "postgres", "uid": "timescaledb"},
+        "definition": "SELECT site_key AS __value, name AS __text FROM inventory.sites ORDER BY name",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Data Center",
+        "multi": false,
+        "name": "site",
+        "options": [],
+        "query": "SELECT site_key AS __value, name AS __text FROM inventory.sites ORDER BY name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Inventory Overview",
+  "uid": "ardmatrix-inventory-overview",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,0 +1,5 @@
+server_key,slot,manufacturer,part_number,serial_number,memory_type,capacity_bytes,speed_mts,ecc
+customer-srv-001,A1,Samsung,M393A8G40AB2,CUST-DIMM-001,DDR4,68719476736,3200,true
+customer-srv-001,A2,Samsung,M393A8G40AB2,CUST-DIMM-002,DDR4,68719476736,3200,true
+customer-srv-002,A1,Micron,MTC40F2046S1RC,CUST-DIMM-003,DDR5,137438953472,4800,true
+customer-srv-002,A2,Micron,MTC40F2046S1RC,CUST-DIMM-004,DDR5,137438953472,4800,true

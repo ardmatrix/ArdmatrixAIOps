@@ -1,0 +1,5 @@
+parent_type,parent_key,interface_name,interface_type,mac_address,ip_addresses,mtu,speed_bps,administrative_status
+server,customer-srv-001,eno1,ethernet,02:10:00:00:01:01,10.50.10.11,1500,25000000000,up
+server,customer-srv-002,eno1,ethernet,02:10:00:00:02:01,10.50.10.12,9000,100000000000,up
+network_device,customer-sw-001,Ethernet1/1,ethernet,,10.50.0.11,9216,25000000000,up
+network_device,customer-fw-001,ethernet1/1,ethernet,,10.50.0.12,1500,10000000000,up

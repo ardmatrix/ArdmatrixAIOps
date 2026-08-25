@@ -1,0 +1,3 @@
+server_key,socket_index,manufacturer,model,architecture,physical_cores,logical_processors,base_frequency_mhz,max_frequency_mhz,l3_cache_bytes,numa_node
+customer-srv-001,0,Intel,Xeon Gold 6330,x86_64,28,56,2000,3100,44040192,0
+customer-srv-002,0,AMD,EPYC 9554,x86_64,64,128,3100,3750,268435456,0

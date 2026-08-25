@@ -1,0 +1,3 @@
+cluster_key,namespace_name,pod_uid,container_key,name,image,image_id,runtime,cpu_request_millicores,cpu_limit_millicores,memory_request_bytes,memory_limit_bytes,gpu_request,status
+customer-k8s-prod,crm,cust-pod-uid-web-01,crm-web,crm-web,ardmatrix/crm-web:1.0,,containerd,200,1000,268435456,1073741824,0,running
+customer-k8s-prod,crm,cust-pod-uid-api-01,crm-api,crm-api,ardmatrix/crm-api:1.0,,containerd,500,2000,536870912,2147483648,0,running

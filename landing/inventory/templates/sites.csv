@@ -1,0 +1,2 @@
+site_key,name,site_type,status,city,country,latitude,longitude,timezone,owner_key,source_native_id
+customer-dc-01,Customer Bengaluru DC,data_center,active,Bengaluru,India,12.935200,77.624500,Asia/Kolkata,customer-dc-ops,cust-site-blr-01

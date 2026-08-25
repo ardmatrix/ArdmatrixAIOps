@@ -1,0 +1,3 @@
+device_key,hostname,site_key,rack_key,device_type,role,manufacturer,model,serial_number,operating_system,operating_system_version,management_address,status,owner_key,source_native_id
+customer-sw-001,customer-sw-001,customer-dc-01,rack-a01,switch,access,Cisco,Nexus 93180YC-FX3,CUST-SW-001,NX-OS,10.4,10.50.0.11,active,customer-dc-ops,cust-switch-001
+customer-fw-001,customer-fw-001,customer-dc-01,rack-a01,firewall,perimeter,Palo Alto Networks,PA-3410,CUST-FW-001,PAN-OS,11.1,10.50.0.12,active,customer-dc-ops,cust-firewall-001

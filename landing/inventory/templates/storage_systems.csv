@@ -1,0 +1,2 @@
+storage_key,name,site_key,rack_key,storage_type,manufacturer,model,serial_number,raw_capacity_bytes,usable_capacity_bytes,management_address,status,source_native_id
+customer-san-001,Customer Primary SAN,customer-dc-01,rack-a01,san,Dell,PowerStore 1200T,CUST-SAN-001,109951162777600,87960930222080,10.50.0.21,active,cust-san-001

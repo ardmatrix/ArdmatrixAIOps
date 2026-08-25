@@ -1,0 +1,2 @@
+application_key,name,description,application_type,version,environment,criticality,owner_key,status,source_native_id
+customer-crm-app,Customer CRM Application,Customer-facing CRM application,three-tier,1.0,production,critical,customer-app-team,active,cust-crm-app

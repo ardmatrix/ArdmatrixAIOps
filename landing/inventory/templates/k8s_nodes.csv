@@ -1,0 +1,2 @@
+cluster_key,node_uid,name,server_key,vm_key,role,architecture,operating_system,kernel_version,kubelet_version,cpu_capacity_millicores,memory_capacity_bytes,gpu_capacity,status,labels
+customer-k8s-prod,cust-node-uid-01,customer-worker-01,,customer-vm-k8s-01,worker,amd64,linux,6.8.0,v1.33,8000,34359738368,0,ready,"{""zone"":""customer-blr-a"",""workload"":""crm""}"

@@ -1,0 +1,2 @@
+cluster_key,namespace_uid,name,status,labels
+customer-k8s-prod,cust-namespace-uid-crm,crm,active,"{""environment"":""production""}"

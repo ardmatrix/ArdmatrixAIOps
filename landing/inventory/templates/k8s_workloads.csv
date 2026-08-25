@@ -1,0 +1,3 @@
+cluster_key,namespace_name,workload_uid,name,workload_type,desired_replicas,available_replicas,container_images,labels
+customer-k8s-prod,crm,cust-deployment-uid-web,crm-web,Deployment,2,2,ardmatrix/crm-web:1.0,"{""app"":""crm-web""}"
+customer-k8s-prod,crm,cust-deployment-uid-api,crm-api,Deployment,2,2,ardmatrix/crm-api:1.0,"{""app"":""crm-api""}"
