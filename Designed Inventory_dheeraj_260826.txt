@@ -15,3 +15,39 @@ I will replace the current six simulated sites with:
 2. London, UK
 3. Singapore
 4. Mumbai, India
+
+
+
+Component	Per data center	Total
+Data centers	—	4
+Racks	3	12
+Physical servers	30	120
+VMs	90	360
+Kubernetes clusters	2	8
+Kubernetes nodes	6	24
+Pods	18	72
+Applications	3	12
+Access L2 switches	6	24
+Core L3 switches	2	8
+Core routers	2	8
+Firewalls	2	8
+VLANs	4	16
+
+
+Network improvements include:
+- Two 48-port L2 access switches per rack
+- Ethernet and GigabitEthernet interfaces
+- Dual-NIC server connectivity
+- Both access switches uplinked to both core L3 switches
+- Redundant routers and firewalls
+- Dual-provider cross-data-center DCI rings
+- Billing, Applications, Management and Shared Services VLANs
+- Explicit pod-to-application topology relationships
+- VM-backed Kubernetes nodes
+
+
+es. The Kubernetes inventory currently uses:
+- 8 Kubernetes clusters — 2 per data center
+- 24 Kubernetes nodes — 6 per data center, 3 nodes per cluster
+- 72 pods — 3 pods per node
+- 96 containers — main containers plus 24 Envoy sidecars

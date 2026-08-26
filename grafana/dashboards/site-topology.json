@@ -1,1 +1,285 @@
-{"annotations":{"list":[]},"editable":false,"id":null,"links":[],"panels":[{"datasource":{"type":"postgres","uid":"timescaledb"},"fieldConfig":{"defaults":{},"overrides":[]},"gridPos":{"h":24,"w":24,"x":0,"y":0},"id":1,"options":{},"targets":[{"datasource":{"type":"postgres","uid":"timescaledb"},"format":"table","rawQuery":true,"rawSql":"SELECT 'site' AS \"Mode\",p.site_key AS \"Site Key\",p.site_name AS \"Data Center\",p.core_switch_a AS \"Core Switch A\",p.core_switch_b AS \"Core Switch B\",p.access_switch AS \"Access Switch\",p.switch_interface AS \"Switch Interface\",p.server_key AS \"Server Key\",p.server_name AS \"Server\",p.server_interface AS \"Server Interface\",initcap(p.redundancy_role) AS \"Redundancy Role\",p.vlan_id::text AS \"VLAN\",p.vlan_name AS \"VLAN Name\",initcap(p.connection_status) AS \"Status\",s.servers AS \"Servers\",s.virtual_machines AS \"VMs\",s.k8s_clusters AS \"K8s Clusters\",s.k8s_nodes AS \"K8s Nodes\",s.k8s_pods AS \"Pods\",s.applications AS \"Applications\" FROM inventory.site_physical_connectivity_overview p JOIN inventory.site_full_stack_topology_overview s ON s.site_key=p.site_key WHERE p.site_key='${site:raw}' ORDER BY p.server_key,p.redundancy_role","refId":"A"}],"transparent":true,"type":"ardmatrix-topology-panel"}],"refresh":"30s","schemaVersion":41,"tags":["ARDMATRIX","Topology","Site","Full Stack","Simulated"],"templating":{"list":[{"current":{"selected":false,"text":"Mumbai Data Center","value":"dc-mumbai"},"datasource":{"type":"postgres","uid":"timescaledb"},"definition":"SELECT name AS __text,site_key AS __value FROM inventory.sites ORDER BY name","hide":0,"includeAll":false,"label":"Data Center","name":"site","options":[],"query":"SELECT name AS __text,site_key AS __value FROM inventory.sites ORDER BY name","refresh":1,"type":"query"}]},"time":{"from":"now-15m","to":"now"},"timepicker":{"hidden":true},"timezone":"browser","title":"Site Full-Stack Physical and Kubernetes Topology","uid":"ardmatrix-site-topology","version":3}
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": false,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT '${animation:raw}' AS \"Animation\",'${topology_level:raw}' AS \"Topology Level\",'site' AS \"Mode\",a.site_key AS \"Site Key\",a.site_name AS \"Data Center\",a.upstream_core_01 AS \"Core Switch A\",a.upstream_core_02 AS \"Core Switch B\",a.switch_name AS \"Access Switch\",a.switch_interface AS \"Switch Interface\",a.server_key AS \"Server Key\",a.server_name AS \"Server\",so.status AS \"Server Status\",so.health_status AS \"Server Health\",so.available AS \"Server Available\",so.open_alerts AS \"Server Alerts\",a.rack_key AS \"Rack Key\",a.rack_name AS \"Rack Name\",a.server_interface AS \"Server Interface\",initcap(a.redundancy_role) AS \"Redundancy Role\",a.vlan_id::text AS \"VLAN\",a.vlan_name AS \"VLAN Name\",a.vrf_name AS \"VRF\",a.cidr::text AS \"Subnet\",a.server_ip_addresses::text AS \"Server IP\",round(coalesce(ni.speed_bps,0)/1000000000.0,0)::text||' Gbps' AS \"Switch Speed\",initcap(coalesce(ni.attributes->>'operational_status',ni.administrative_status,a.connection_status)) AS \"Port Status\",round(coalesce((ni.attributes->>'rx_utilization_pct')::numeric,0),1) AS \"RX %\",round(coalesce((ni.attributes->>'tx_utilization_pct')::numeric,0),1) AS \"TX %\",coalesce((ni.attributes->>'errors')::integer,0) AS \"Port Errors\",initcap(a.connection_status) AS \"Status\",s.servers AS \"Servers\",s.virtual_machines AS \"VMs\",s.k8s_clusters AS \"K8s Clusters\",s.k8s_nodes AS \"K8s Nodes\",s.k8s_pods AS \"Pods\",s.applications AS \"Applications\" FROM inventory.server_network_attachment_overview a JOIN inventory.site_full_stack_topology_overview s ON s.site_key=a.site_key JOIN inventory.server_operational_overview so ON so.server_key=a.server_key LEFT JOIN inventory.network_devices nd ON nd.device_key=a.switch_key LEFT JOIN inventory.network_interfaces ni ON ni.network_device_id=nd.id AND ni.interface_name=a.switch_interface WHERE a.site_key='${site:raw}' AND ('${topology_level:raw}'='Rack Connectivity' OR '${rack:raw}'='All' OR a.rack_key='${rack:raw}') ORDER BY a.rack_key,a.switch_name,a.switch_interface,a.server_key",
+          "refId": "A"
+        }
+      ],
+      "transparent": true,
+      "type": "ardmatrix-topology-panel"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Down"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Maintenance / Warning"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 2,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT r.name AS \"Rack\",r.rack_key AS \"Rack Key\",coalesce(sw.l2_switches,0) AS \"L2 Switches\",coalesce(ss.servers,0) AS \"Servers\",coalesce(ss.up_servers,0) AS \"Up\",coalesce(ss.warning_servers,0) AS \"Maintenance / Warning\",coalesce(ss.down_servers,0) AS \"Down\",coalesce(vs.vms,0) AS \"VMs\",coalesce(ks.k8s_nodes,0) AS \"K8s Nodes\",coalesce(ks.pods,0) AS \"Pods\",round(100.0*coalesce(ss.up_servers,0)/nullif(ss.servers,0),1) AS \"Server Health %\" FROM inventory.racks r JOIN inventory.data_center_rows dr ON dr.id=r.row_id JOIN inventory.rooms rm ON rm.id=dr.room_id JOIN inventory.sites s ON s.id=rm.site_id LEFT JOIN LATERAL (SELECT count(*) l2_switches FROM inventory.network_devices nd WHERE nd.rack_id=r.id AND nd.device_type='switch' AND nd.role ILIKE '%access%') sw ON true LEFT JOIN LATERAL (SELECT count(*) servers,count(*) FILTER (WHERE sv.status='active' AND sv.health_status='healthy') up_servers,count(*) FILTER (WHERE sv.status='maintenance' OR sv.health_status IN ('warning','degraded')) warning_servers,count(*) FILTER (WHERE sv.status='failed' OR sv.health_status='critical') down_servers FROM inventory.servers sv WHERE sv.rack_id=r.id) ss ON true LEFT JOIN LATERAL (SELECT count(*) vms FROM inventory.virtual_machines vm JOIN inventory.hypervisors h ON h.id=vm.hypervisor_id JOIN inventory.servers sv ON sv.id=h.server_id WHERE sv.rack_id=r.id) vs ON true LEFT JOIN LATERAL (SELECT count(DISTINCT kn.id) k8s_nodes,count(DISTINCT p.id) pods FROM inventory.k8s_nodes kn LEFT JOIN inventory.virtual_machines vm ON vm.id=kn.vm_id LEFT JOIN inventory.hypervisors h ON h.id=vm.hypervisor_id LEFT JOIN inventory.servers sv ON sv.id=coalesce(kn.server_id,h.server_id) LEFT JOIN inventory.k8s_pods p ON p.node_id=kn.id WHERE sv.rack_id=r.id) ks ON true WHERE s.site_key='${site:raw}' AND ('${rack:raw}'='All' OR r.rack_key='${rack:raw}') ORDER BY r.rack_key",
+          "refId": "A"
+        }
+      ],
+      "title": "Inventory Summary by Rack — live database aggregation",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": [
+    "ARDMATRIX",
+    "Topology",
+    "Port Level",
+    "Simulated"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "Chicago Data Center",
+          "value": "dc-chicago"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "timescaledb"
+        },
+        "definition": "SELECT name AS __text,site_key AS __value FROM inventory.sites ORDER BY name",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data Center",
+        "name": "site",
+        "options": [],
+        "query": "SELECT name AS __text,site_key AS __value FROM inventory.sites ORDER BY name",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "allValue": "All",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "All"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "timescaledb"
+        },
+        "definition": "SELECT r.rack_key AS __value,r.name AS __text FROM inventory.racks r JOIN inventory.data_center_rows dr ON dr.id=r.row_id JOIN inventory.rooms rm ON rm.id=dr.room_id JOIN inventory.sites s ON s.id=rm.site_id WHERE s.site_key='${site:raw}' ORDER BY r.rack_key",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Rack",
+        "multi": false,
+        "name": "rack",
+        "options": [],
+        "query": "SELECT r.rack_key AS __value,r.name AS __text FROM inventory.racks r JOIN inventory.data_center_rows dr ON dr.id=r.row_id JOIN inventory.rooms rm ON rm.id=dr.room_id JOIN inventory.sites s ON s.id=rm.site_id WHERE s.site_key='${site:raw}' ORDER BY r.rack_key",
+        "refresh": 1,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "Summary",
+          "value": "Summary"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Topology Level",
+        "multi": false,
+        "name": "topology_level",
+        "options": [
+          {
+            "selected": true,
+            "text": "Summary",
+            "value": "Summary"
+          },
+          {
+            "selected": false,
+            "text": "Rack Connectivity",
+            "value": "Rack Connectivity"
+          },
+          {
+            "selected": false,
+            "text": "Port Level",
+            "value": "Port Level"
+          }
+        ],
+        "query": "Summary,Rack Connectivity,Port Level",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "On",
+          "value": "On"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Animation",
+        "multi": false,
+        "name": "animation",
+        "options": [
+          {
+            "selected": true,
+            "text": "On",
+            "value": "On"
+          },
+          {
+            "selected": false,
+            "text": "Off",
+            "value": "Off"
+          }
+        ],
+        "query": "On,Off",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": true
+  },
+  "timezone": "browser",
+  "title": "Site Full-Stack Physical and Kubernetes Topology",
+  "uid": "ardmatrix-site-topology",
+  "version": 9
+}

@@ -14,6 +14,7 @@
     {"title":"7 Applications","type":"link","keepTime":true,"url":"/d/ardmatrix-application-inventory/application-and-business-service-inventory?orgId=1&${site:queryparam}&var-application=All"},
     {"title":"8 Network","type":"link","keepTime":true,"url":"/d/ardmatrix-network-inventory/network-infrastructure-inventory-and-topology?orgId=1&${site:queryparam}&var-device_type=All"},
     {"title":"9 Topology","type":"link","keepTime":true,"url":"/d/ardmatrix-global-topology/global-full-stack-data-center-topology?orgId=1"},
+    {"title":"Network Hierarchy","type":"link","keepTime":true,"url":"/d/ardmatrix-site-topology/site-full-stack-physical-and-kubernetes-topology?orgId=1&var-site=${site:raw}"},
     {"title":"Server Port Mapping","type":"link","keepTime":true,"url":"/d/ardmatrix-network-inventory/network-infrastructure-inventory-and-topology?orgId=1&viewPanel=20&${site:queryparam}&${device_type:queryparam}"},
     {"title":"End-to-End","type":"link","keepTime":true,"url":"/d/ardmatrix-e2e-topology/end-to-end-service-topology?orgId=1&var-site=${site:raw}"},
     {"title":"AIOps Expert","type":"link","targetBlank":true,"url":"http://localhost:8090/"}
