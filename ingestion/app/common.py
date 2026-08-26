@@ -34,6 +34,11 @@ def as_int(value: str | None) -> int | None:
     return int(value) if value is not None else None
 
 
+def as_float(value: str | None) -> float | None:
+    value = blank_to_none(value)
+    return float(value) if value is not None else None
+
+
 def as_bool(value: str | None) -> bool | None:
     value = blank_to_none(value)
     if value is None:

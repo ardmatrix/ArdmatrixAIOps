@@ -1,3 +1,3 @@
-vm_key,name,hostname,hypervisor_key,vcpu_count,memory_bytes,provisioned_storage_bytes,operating_system,operating_system_version,ip_addresses,status,owner_key,source_native_id
-customer-vm-k8s-01,Customer Kubernetes Node,customer-vm-k8s-01,customer-esxi-001,8,34359738368,536870912000,Ubuntu Linux,24.04,10.50.10.101,running,customer-platform,cust-vm-k8s-01
-customer-vm-db-01,Customer Database VM,customer-vm-db-01,customer-esxi-001,8,68719476736,1099511627776,Rocky Linux,9,10.50.10.110,running,customer-app-team,cust-vm-db-01
+vm_key,name,hostname,hypervisor_key,vcpu_count,memory_bytes,provisioned_storage_bytes,operating_system,operating_system_version,ip_addresses,status,owner_key,source_native_id,health_status,environment,criticality,monitoring_status,cpu_utilization_pct,memory_utilization_pct,storage_utilization_pct,uptime_pct,snapshot_count,backup_status
+customer-vm-k8s-01,Customer Kubernetes Node,customer-vm-k8s-01,customer-esxi-001,8,34359738368,536870912000,Ubuntu Linux,24.04,10.50.10.101,running,customer-platform,cust-vm-k8s-01,healthy,production,critical,monitored,48,61,55,99.99,1,protected
+customer-vm-db-01,Customer Database VM,customer-vm-db-01,customer-esxi-001,8,68719476736,1099511627776,Rocky Linux,9,10.50.10.110,running,customer-app-team,cust-vm-db-01,warning,production,critical,monitored,67,82,74,99.95,2,warning

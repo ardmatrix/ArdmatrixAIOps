@@ -1,2 +1,2 @@
-site_key,room_key,row_key,rack_key,name,rack_units,max_power_watts,status
-customer-dc-01,hall-a,row-a,rack-a06,CUST-BLR-A06,42,12000,active
+site_key,room_key,row_key,rack_key,name,rack_units,max_power_watts,status,health_status,used_rack_units,current_power_watts,temperature_c,humidity_pct,monitoring_status
+customer-dc-01,hall-a,row-a,rack-a06,CUST-BLR-A06,42,12000,active,healthy,31,7800,23.8,48,monitored

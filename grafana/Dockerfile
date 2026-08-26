@@ -6,6 +6,9 @@ COPY branding/ardmatrix-header-logo.png /usr/share/grafana/public/build/static/i
 COPY branding/ardmatrix-favicon.png /usr/share/grafana/public/build/img/ardmatrix-favicon.v7.png
 COPY branding/ardmatrix-apple-touch-icon.png /usr/share/grafana/public/build/img/ardmatrix-apple-touch-icon.v7.png
 COPY branding/ardmatrix-official-logo.png /usr/share/grafana/public/img/ardmatrix-official-logo.png
+COPY branding/ardmatrix-noc-radial-v1.png /usr/share/grafana/public/img/ardmatrix-noc-radial-v1.png
+COPY plugins/ardmatrix-inventory-hub-panel /var/lib/grafana/plugins/ardmatrix-inventory-hub-panel
+COPY plugins/ardmatrix-topology-panel /var/lib/grafana/plugins/ardmatrix-topology-panel
 
 RUN sed -i \
       -e 's/grafana_icon\.1e0deb6b\.svg/ardmatrix_header.v7.png/g' \

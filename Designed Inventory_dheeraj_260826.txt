@@ -1,0 +1,17 @@
+I recommend six Kubernetes nodes per data center, not two nodes inside every VM. A Kubernetes node normally is a VM or physical machine; placing two nodes inside every VM is technically misleading and would produce 720 nested nodes.
+Recommended VLANs:
+- VLAN 110 — Billing
+- VLAN 120 — Applications
+- VLAN 130 — Management
+- VLAN 140 — Shared Services
+Recommended operating-system mix:
+- RHEL 9
+- Ubuntu Server 24.04
+- Windows Server 2025
+- VMware ESXi 8
+- Rocky Linux 9
+I will replace the current six simulated sites with:
+1. Chicago, USA
+2. London, UK
+3. Singapore
+4. Mumbai, India

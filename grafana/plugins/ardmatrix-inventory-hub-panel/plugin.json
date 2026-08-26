@@ -1,0 +1,15 @@
+{
+  "$schema": "https://grafana.com/schemas/plugin/v2.json",
+  "type": "panel",
+  "name": "ARDMATRIX Inventory Hub",
+  "id": "ardmatrix-inventory-hub-panel",
+  "info": {
+    "description": "Executive NOC inventory navigation hub",
+    "author": { "name": "ARDMATRIX" },
+    "keywords": ["inventory", "noc", "topology"],
+    "logos": { "small": "img/logo.svg", "large": "img/logo.svg" },
+    "version": "2.6.2",
+    "updated": "2026-08-25"
+  },
+  "dependencies": { "grafanaDependency": ">=11.0.0", "plugins": [] }
+}

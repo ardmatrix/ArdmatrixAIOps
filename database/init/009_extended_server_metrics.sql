@@ -1,0 +1,15 @@
+ALTER TABLE telemetry.server_metrics
+    ADD COLUMN IF NOT EXISTS storage_free_bytes bigint NOT NULL DEFAULT 0 CHECK (storage_free_bytes >= 0),
+    ADD COLUMN IF NOT EXISTS disk_read_iops double precision NOT NULL DEFAULT 0 CHECK (disk_read_iops >= 0),
+    ADD COLUMN IF NOT EXISTS disk_write_iops double precision NOT NULL DEFAULT 0 CHECK (disk_write_iops >= 0),
+    ADD COLUMN IF NOT EXISTS disk_latency_ms double precision NOT NULL DEFAULT 0 CHECK (disk_latency_ms >= 0),
+    ADD COLUMN IF NOT EXISTS bandwidth_utilization_percent double precision NOT NULL DEFAULT 0 CHECK (bandwidth_utilization_percent BETWEEN 0 AND 100),
+    ADD COLUMN IF NOT EXISTS network_latency_ms double precision NOT NULL DEFAULT 0 CHECK (network_latency_ms >= 0),
+    ADD COLUMN IF NOT EXISTS packet_loss_percent double precision NOT NULL DEFAULT 0 CHECK (packet_loss_percent BETWEEN 0 AND 100),
+    ADD COLUMN IF NOT EXISTS temperature_celsius double precision NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS humidity_percent double precision NOT NULL DEFAULT 0 CHECK (humidity_percent BETWEEN 0 AND 100),
+    ADD COLUMN IF NOT EXISTS airflow_cfm double precision NOT NULL DEFAULT 0 CHECK (airflow_cfm >= 0),
+    ADD COLUMN IF NOT EXISTS pue double precision NOT NULL DEFAULT 1 CHECK (pue >= 1),
+    ADD COLUMN IF NOT EXISTS power_consumption_watts double precision NOT NULL DEFAULT 0 CHECK (power_consumption_watts >= 0),
+    ADD COLUMN IF NOT EXISTS uptime_percent double precision NOT NULL DEFAULT 100 CHECK (uptime_percent BETWEEN 0 AND 100),
+    ADD COLUMN IF NOT EXISTS error_rate_per_minute double precision NOT NULL DEFAULT 0 CHECK (error_rate_per_minute >= 0);

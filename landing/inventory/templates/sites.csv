@@ -1,2 +1,2 @@
-site_key,name,site_type,status,city,country,latitude,longitude,timezone,owner_key,source_native_id
-customer-dc-01,Customer Bengaluru DC,data_center,active,Bengaluru,India,12.935200,77.624500,Asia/Kolkata,customer-dc-ops,cust-site-blr-01
+site_key,name,site_type,status,city,country,latitude,longitude,timezone,owner_key,source_native_id,region,environment,health_status,facility_power_capacity_kw,facility_power_used_kw,cooling_capacity_kw,temperature_c,humidity_pct,pue,monitoring_coverage_pct,inventory_completeness_pct
+customer-dc-01,Customer Bengaluru DC,data_center,active,Bengaluru,India,12.935200,77.624500,Asia/Kolkata,customer-dc-ops,cust-site-blr-01,South India,production,healthy,500,315,420,23.4,47,1.43,98,96

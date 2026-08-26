@@ -22,3 +22,11 @@ scrape_configs:
   - job_name: inventory-consumer
     static_configs:
       - targets: ["inventory-consumer:8000"]
+
+  - job_name: server-metric-publisher
+    static_configs:
+      - targets: ["server-metric-publisher:8000"]
+
+  - job_name: server-metric-consumer
+    static_configs:
+      - targets: ["server-metric-consumer:8000"]

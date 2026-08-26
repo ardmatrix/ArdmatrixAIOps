@@ -1,0 +1,64 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": false,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT (SELECT count(*) FROM inventory.sites) AS \"Data Centers\",(SELECT count(*) FROM inventory.racks) AS \"Racks\",(SELECT count(*) FROM inventory.servers) AS \"Servers\",(SELECT count(*) FROM inventory.virtual_machines) AS \"Virtual Machines\",(SELECT count(*) FROM inventory.applications) AS \"Applications\",(SELECT count(*) FROM inventory.network_devices) AS \"Network Devices\",(SELECT round(100.0*sum(used_rack_units)/nullif(sum(rack_units),0)) FROM inventory.racks) AS \"Rack Utilization\",(SELECT count(*) FILTER(WHERE health_status='healthy') FROM inventory.servers) AS \"Server Healthy\",(SELECT count(*) FILTER(WHERE health_status='warning') FROM inventory.servers) AS \"Server Warning\",(SELECT count(*) FILTER(WHERE health_status='critical') FROM inventory.servers) AS \"Server Critical\",(SELECT count(*) FILTER(WHERE status='running') FROM inventory.virtual_machines) AS \"VM Running\",(SELECT count(*) FILTER(WHERE status<>'running') FROM inventory.virtual_machines) AS \"VM Stopped\",(SELECT count(*) FILTER(WHERE status='active') FROM inventory.applications) AS \"App Healthy\",(SELECT count(*) FILTER(WHERE status='maintenance') FROM inventory.applications) AS \"App Warning\",(SELECT count(*) FILTER(WHERE status NOT IN ('active','maintenance')) FROM inventory.applications) AS \"App Critical\",(SELECT count(*) FILTER(WHERE status='active') FROM inventory.network_devices) AS \"Network Online\",(SELECT count(*) FILTER(WHERE status<>'active') FROM inventory.network_devices) AS \"Network Offline\",(SELECT round(100.0*count(*) FILTER(WHERE health_status='healthy')/nullif(count(*),0)) FROM inventory.servers) AS \"System Health\",(SELECT count(*) FROM events.inventory_alerts WHERE status<>'resolved') AS \"Open Alerts\",(SELECT count(*) FROM events.inventory_alerts WHERE entity_type='site' AND opened_at>now()-interval '24 hours') AS \"Security Events\",(SELECT round(100.0*sum(used_rack_units)/nullif(sum(rack_units),0)) FROM inventory.racks) AS \"Capacity\",(SELECT count(*) FROM events.inventory_alerts WHERE status='open' AND severity='warning') AS \"Predicted Issues\",(SELECT count(*) FROM events.inventory_alerts WHERE status='open' AND metric_name IS NOT NULL) AS \"AI Anomalies\",(SELECT count(*) FROM events.inventory_alerts WHERE status<>'resolved' AND severity='critical') AS \"Alerts Critical\",(SELECT count(*) FROM events.inventory_alerts WHERE status<>'resolved' AND severity='warning') AS \"Alerts Warning\"",
+          "refId": "A"
+        }
+      ],
+      "title": "",
+      "transparent": true,
+      "type": "ardmatrix-inventory-hub-panel"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": [
+    "ARDMATRIX",
+    "NOC",
+    "Inventory",
+    "Simulated"
+  ],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": true
+  },
+  "timezone": "browser",
+  "title": "ARDMATRIX NOC Inventory Command Center",
+  "uid": "ardmatrix-technical-home",
+  "version": 13,
+  "weekStart": ""
+}

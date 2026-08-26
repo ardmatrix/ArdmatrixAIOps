@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ARDMATRIX AIOps Expert</title>
+  <style>
+    :root{color-scheme:dark;--bg:#071019;--panel:#0d1924;--line:#243544;--text:#e8f0f7;--muted:#91a4b5;--blue:#1683ff;--cyan:#21c7c7;--red:#ff5252}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 30% 0,#10283b 0,var(--bg) 42%);color:var(--text);font:14px Inter,system-ui,sans-serif;min-height:100vh}
+    .shell{max-width:1050px;height:100vh;margin:auto;padding:22px;display:flex;flex-direction:column;gap:14px}
+    header{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);background:#0a151fcc;border-radius:10px;padding:16px 20px}
+    .brand{display:flex;align-items:center;gap:15px}.brand img{width:130px;height:38px;object-fit:contain;object-position:left center}h1{font-size:22px;margin:0}.tag{margin-left:10px;color:#57a7ff;background:#0b3463;padding:5px 9px;border-radius:5px;font-size:11px}.status{color:var(--muted)}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f5b400;margin-right:7px}
+    main{flex:1;min-height:0;border:1px solid var(--line);background:#09141ee8;border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+    #messages{flex:1;overflow:auto;padding:22px;display:flex;flex-direction:column;gap:16px}.msg{max-width:82%;padding:13px 15px;border-radius:10px;line-height:1.5;white-space:pre-wrap}.assistant{align-self:flex-start;background:#122331;border:1px solid #294256}.user{align-self:flex-end;background:#075aaf}.meta{font-size:11px;color:var(--muted);margin-top:7px}
+    .suggestions{padding:0 20px 14px;display:flex;gap:8px;flex-wrap:wrap}.suggestions button{background:#0d2130;color:#acd5f7;border:1px solid #28506c;border-radius:16px;padding:7px 11px;cursor:pointer}.suggestions button:hover{border-color:var(--blue)}
+    form{display:flex;gap:10px;padding:16px;border-top:1px solid var(--line);background:#0b1721}textarea{flex:1;resize:none;border:1px solid #324656;border-radius:7px;background:#07111a;color:var(--text);padding:12px;font:inherit;min-height:48px;max-height:120px}textarea:focus{outline:1px solid var(--blue)}button[type=submit]{border:0;border-radius:7px;background:var(--blue);color:white;font-weight:600;padding:0 22px;cursor:pointer}button:disabled{opacity:.5;cursor:wait}.notice{font-size:12px;color:var(--muted);text-align:center}.error{color:#ff9b9b}
+    @media(max-width:650px){.shell{padding:8px}.msg{max-width:94%}h1{font-size:17px}.tag{display:none}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header><div class="brand"><img src="/static/ardmatrix-logo.png" alt="ARDMATRIX"><h1>AIOps Expert <span class="tag">GPT-5.4 MINI</span></h1></div><div class="status"><span class="dot" id="dot"></span><span id="health">Checking services…</span></div></header>
+  <main>
+    <div id="messages"><div class="msg assistant">Hello, I’m AIOps Expert. Ask me about data centers, racks, servers, VMs, Kubernetes, applications, health, or inventory alerts.<div class="meta">Answers are checked against the read-only inventory database.</div></div></div>
+    <div class="suggestions">
+      <button data-q="Give me the complete inventory summary">Inventory summary</button>
+      <button data-q="Which data centers have critical health or open alerts?">Critical data centers</button>
+      <button data-q="Show Kubernetes cluster and pod health">Kubernetes health</button>
+      <button data-q="List critical applications and their business services">Critical applications</button>
+    </div>
+    <form id="form"><textarea id="question" required minlength="2" maxlength="2000" placeholder="Ask an inventory question…"></textarea><button type="submit" id="send">Ask</button></form>
+  </main>
+  <div class="notice">Common questions use the instant database path. Complex questions use GPT-5.4 mini. Inventory data may be simulated.</div>
+</div>
+<script>
+const messages=document.querySelector('#messages'),form=document.querySelector('#form'),question=document.querySelector('#question'),send=document.querySelector('#send');
+const history=[];
+function add(text,role,meta=''){const box=document.createElement('div');box.className='msg '+role;box.textContent=text;if(meta){const m=document.createElement('div');m.className='meta';m.textContent=meta;box.appendChild(m)}messages.appendChild(box);messages.scrollTop=messages.scrollHeight;return box}
+async function health(){try{const r=await fetch('/health'),h=await r.json();document.querySelector('#health').textContent=h.status==='ok'?`${h.model} · Database connected`:'Service degraded';document.querySelector('#dot').style.background=h.status==='ok'?'#32c766':'#ff5252'}catch{document.querySelector('#health').textContent='Service unavailable';document.querySelector('#dot').style.background='#ff5252'}}
+form.addEventListener('submit',async e=>{e.preventDefault();const text=question.value.trim();if(text.length<2)return;add(text,'user');history.push({role:'user',content:text});question.value='';send.disabled=true;send.textContent='Thinking…';const wait=add('Checking the inventory database and generating an answer…','assistant');try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history:history.slice(-10,-1)})});const data=await r.json();if(!r.ok)throw new Error(data.detail||'Request failed');wait.textContent=data.answer;const m=document.createElement('div');m.className='meta';m.textContent=`Model: ${data.model}${data.tools_used.length?' · '+data.tools_used.join(', '):''}`;wait.appendChild(m);history.push({role:'assistant',content:data.answer})}catch(err){wait.textContent='The assistant service is temporarily unavailable. Database-backed inventory queries can be retried shortly.';wait.classList.add('error')}finally{send.disabled=false;send.textContent='Ask';question.focus()}});
+document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{question.value=b.dataset.q;form.requestSubmit()});question.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit()}});health();setInterval(health,30000);
+</script>
+</body>
+</html>

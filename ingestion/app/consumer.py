@@ -10,7 +10,7 @@ from kafka import KafkaConsumer
 from prometheus_client import Counter, Gauge, start_http_server
 from psycopg.types.json import Jsonb
 
-from .common import as_bool, as_int, blank_to_none, json_deserializer
+from .common import as_bool, as_float, as_int, blank_to_none, json_deserializer
 from .config import DATABASE_URL, KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPIC, METRICS_PORT
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -48,20 +48,35 @@ def upsert_site(connection: psycopg.Connection[Any], row: dict[str, str]) -> str
     return str(connection.execute(
         f"""
         INSERT INTO inventory.sites
-            (site_key,name,site_type,status,address,latitude,longitude,timezone,owner_id,source_id,source_native_id,is_simulated)
+            (site_key,name,site_type,status,address,latitude,longitude,timezone,owner_id,source_id,source_native_id,is_simulated,
+             region,environment,health_status,facility_power_capacity_kw,facility_power_used_kw,cooling_capacity_kw,
+             temperature_c,humidity_pct,pue,monitoring_coverage_pct,inventory_completeness_pct)
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,
-            (SELECT id FROM inventory.owners WHERE owner_key=%s),{source_id_sql()},%s,false)
+            (SELECT id FROM inventory.owners WHERE owner_key=%s),{source_id_sql()},%s,false,
+            %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (site_key) DO UPDATE SET name=EXCLUDED.name, site_type=EXCLUDED.site_type,
             status=EXCLUDED.status, address=EXCLUDED.address, latitude=EXCLUDED.latitude,
             longitude=EXCLUDED.longitude, timezone=EXCLUDED.timezone,
             owner_id=EXCLUDED.owner_id, source_id=EXCLUDED.source_id,
-            source_native_id=EXCLUDED.source_native_id, is_simulated=false, last_seen_at=now()
+            source_native_id=EXCLUDED.source_native_id,region=EXCLUDED.region,
+            environment=EXCLUDED.environment,health_status=EXCLUDED.health_status,
+            facility_power_capacity_kw=EXCLUDED.facility_power_capacity_kw,
+            facility_power_used_kw=EXCLUDED.facility_power_used_kw,cooling_capacity_kw=EXCLUDED.cooling_capacity_kw,
+            temperature_c=EXCLUDED.temperature_c,humidity_pct=EXCLUDED.humidity_pct,pue=EXCLUDED.pue,
+            monitoring_coverage_pct=EXCLUDED.monitoring_coverage_pct,
+            inventory_completeness_pct=EXCLUDED.inventory_completeness_pct,is_simulated=false,last_seen_at=now()
         RETURNING id
         """,
         (row["site_key"], row["name"], row["site_type"], row["status"],
          Jsonb({"city": row["city"], "country": row["country"]}),
          float(row["latitude"]), float(row["longitude"]), row["timezone"],
-         row["owner_key"], row["source_native_id"]),
+         row["owner_key"], row["source_native_id"],blank_to_none(row.get("region")),
+         row.get("environment","production"),row.get("health_status","healthy"),
+         as_float(row.get("facility_power_capacity_kw")),as_float(row.get("facility_power_used_kw")),
+         as_float(row.get("cooling_capacity_kw")),as_float(row.get("temperature_c")),
+         as_float(row.get("humidity_pct")),as_float(row.get("pue")),
+         as_float(row.get("monitoring_coverage_pct")) or 100,
+         as_float(row.get("inventory_completeness_pct")) or 100),
     ).fetchone()[0])
 
 
@@ -95,17 +110,24 @@ def upsert_rack(connection: psycopg.Connection[Any], row: dict[str, str]) -> str
     return str(connection.execute(
         """
         INSERT INTO inventory.racks
-            (row_id,rack_key,name,rack_units,max_power_watts,status,is_simulated)
+            (row_id,rack_key,name,rack_units,max_power_watts,status,is_simulated,health_status,
+             used_rack_units,current_power_watts,temperature_c,humidity_pct,monitoring_status)
         VALUES ((SELECT dr.id FROM inventory.data_center_rows dr
                  JOIN inventory.rooms rm ON rm.id=dr.room_id JOIN inventory.sites s ON s.id=rm.site_id
-                 WHERE s.site_key=%s AND rm.room_key=%s AND dr.row_key=%s),%s,%s,%s,%s,%s,false)
+                 WHERE s.site_key=%s AND rm.room_key=%s AND dr.row_key=%s),%s,%s,%s,%s,%s,false,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (row_id,rack_key) DO UPDATE SET name=EXCLUDED.name,
             rack_units=EXCLUDED.rack_units,max_power_watts=EXCLUDED.max_power_watts,
-            status=EXCLUDED.status,is_simulated=false
+            status=EXCLUDED.status,health_status=EXCLUDED.health_status,
+            used_rack_units=EXCLUDED.used_rack_units,current_power_watts=EXCLUDED.current_power_watts,
+            temperature_c=EXCLUDED.temperature_c,humidity_pct=EXCLUDED.humidity_pct,
+            monitoring_status=EXCLUDED.monitoring_status,is_simulated=false
         RETURNING id
         """,
         (row["site_key"], row["room_key"], row["row_key"], row["rack_key"], row["name"],
-         as_int(row["rack_units"]), as_int(row["max_power_watts"]), row["status"]),
+         as_int(row["rack_units"]), as_int(row["max_power_watts"]), row["status"],
+         row.get("health_status","healthy"),as_int(row.get("used_rack_units")) or 0,
+         as_int(row.get("current_power_watts")) or 0,as_float(row.get("temperature_c")),
+         as_float(row.get("humidity_pct")),row.get("monitoring_status","monitored")),
     ).fetchone()[0])
 
 
@@ -122,9 +144,10 @@ def upsert_server(connection: psycopg.Connection[Any], row: dict[str, str]) -> s
         INSERT INTO inventory.servers
             (server_key,hostname,rack_id,rack_unit_start,rack_unit_height,server_type,manufacturer,
              model,serial_number,asset_tag,architecture,operating_system,operating_system_version,
-             status,owner_id,source_id,source_native_id,is_simulated)
+             status,owner_id,source_id,source_native_id,is_simulated,health_status,environment,criticality,
+             monitoring_status,warranty_expiry,end_of_support,business_service)
         VALUES (%s,%s,{rack_id_sql()},%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
-            (SELECT id FROM inventory.owners WHERE owner_key=%s),{source_id_sql()},%s,false)
+            (SELECT id FROM inventory.owners WHERE owner_key=%s),{source_id_sql()},%s,false,%s,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (server_key) DO UPDATE SET hostname=EXCLUDED.hostname,rack_id=EXCLUDED.rack_id,
             rack_unit_start=EXCLUDED.rack_unit_start,rack_unit_height=EXCLUDED.rack_unit_height,
             manufacturer=EXCLUDED.manufacturer,model=EXCLUDED.model,serial_number=EXCLUDED.serial_number,
@@ -132,7 +155,11 @@ def upsert_server(connection: psycopg.Connection[Any], row: dict[str, str]) -> s
             operating_system=EXCLUDED.operating_system,
             operating_system_version=EXCLUDED.operating_system_version,status=EXCLUDED.status,
             owner_id=EXCLUDED.owner_id,source_id=EXCLUDED.source_id,
-            source_native_id=EXCLUDED.source_native_id,is_simulated=false,last_seen_at=now()
+            source_native_id=EXCLUDED.source_native_id,health_status=EXCLUDED.health_status,
+            environment=EXCLUDED.environment,criticality=EXCLUDED.criticality,
+            monitoring_status=EXCLUDED.monitoring_status,warranty_expiry=EXCLUDED.warranty_expiry,
+            end_of_support=EXCLUDED.end_of_support,business_service=EXCLUDED.business_service,
+            is_simulated=false,last_seen_at=now()
         RETURNING id
         """,
         (row["server_key"], row["hostname"], row["site_key"], row["rack_key"],
@@ -140,7 +167,10 @@ def upsert_server(connection: psycopg.Connection[Any], row: dict[str, str]) -> s
          blank_to_none(row["manufacturer"]), blank_to_none(row["model"]), blank_to_none(row["serial_number"]),
          blank_to_none(row["asset_tag"]), blank_to_none(row["architecture"]),
          blank_to_none(row["operating_system"]), blank_to_none(row["operating_system_version"]), row["status"],
-         row["owner_key"], row["source_native_id"]),
+         row["owner_key"], row["source_native_id"],row.get("health_status","healthy"),
+         row.get("environment","production"),row.get("criticality","medium"),
+         row.get("monitoring_status","monitored"),blank_to_none(row.get("warranty_expiry")),
+         blank_to_none(row.get("end_of_support")),blank_to_none(row.get("business_service"))),
     ).fetchone()[0])
 
 
@@ -316,12 +346,14 @@ def upsert_virtual_machine(connection: psycopg.Connection[Any], row: dict[str, s
         INSERT INTO inventory.virtual_machines
             (vm_key,name,hostname,hypervisor_id,vcpu_count,memory_bytes,
              provisioned_storage_bytes,operating_system,operating_system_version,
-             ip_addresses,status,owner_id,source_id,source_native_id,is_simulated)
+             ip_addresses,status,owner_id,source_id,source_native_id,is_simulated,health_status,environment,
+             criticality,monitoring_status,cpu_utilization_pct,memory_utilization_pct,storage_utilization_pct,
+             uptime_pct,snapshot_count,backup_status)
         VALUES (%s,%s,%s,
             (SELECT id FROM inventory.hypervisors WHERE hypervisor_key=%s),
             %s,%s,%s,%s,%s,%s,%s,
             (SELECT id FROM inventory.owners WHERE owner_key=%s),
-            {source_id_sql()},%s,false)
+            {source_id_sql()},%s,false,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (vm_key) DO UPDATE SET name=EXCLUDED.name,hostname=EXCLUDED.hostname,
             hypervisor_id=EXCLUDED.hypervisor_id,vcpu_count=EXCLUDED.vcpu_count,
             memory_bytes=EXCLUDED.memory_bytes,
@@ -330,14 +362,25 @@ def upsert_virtual_machine(connection: psycopg.Connection[Any], row: dict[str, s
             operating_system_version=EXCLUDED.operating_system_version,
             ip_addresses=EXCLUDED.ip_addresses,status=EXCLUDED.status,
             owner_id=EXCLUDED.owner_id,source_id=EXCLUDED.source_id,
-            source_native_id=EXCLUDED.source_native_id,is_simulated=false,last_seen_at=now()
+            source_native_id=EXCLUDED.source_native_id,health_status=EXCLUDED.health_status,
+            environment=EXCLUDED.environment,criticality=EXCLUDED.criticality,
+            monitoring_status=EXCLUDED.monitoring_status,cpu_utilization_pct=EXCLUDED.cpu_utilization_pct,
+            memory_utilization_pct=EXCLUDED.memory_utilization_pct,
+            storage_utilization_pct=EXCLUDED.storage_utilization_pct,uptime_pct=EXCLUDED.uptime_pct,
+            snapshot_count=EXCLUDED.snapshot_count,backup_status=EXCLUDED.backup_status,
+            is_simulated=false,last_seen_at=now()
         RETURNING id
         """,
         (row["vm_key"], row["name"], blank_to_none(row["hostname"]), row["hypervisor_key"],
          as_int(row["vcpu_count"]), as_int(row["memory_bytes"]),
          as_int(row["provisioned_storage_bytes"]), blank_to_none(row["operating_system"]),
          blank_to_none(row["operating_system_version"]), addresses, row["status"],
-         row["owner_key"], row["source_native_id"]),
+         row["owner_key"], row["source_native_id"],row.get("health_status","healthy"),
+         row.get("environment","production"),row.get("criticality","medium"),
+         row.get("monitoring_status","monitored"),as_float(row.get("cpu_utilization_pct")) or 0,
+         as_float(row.get("memory_utilization_pct")) or 0,as_float(row.get("storage_utilization_pct")) or 0,
+         as_float(row.get("uptime_pct")) or 100,as_int(row.get("snapshot_count")) or 0,
+         row.get("backup_status","protected")),
     ).fetchone()[0])
 
 

@@ -1,0 +1,1 @@
+{"$schema":"https://grafana.com/schemas/plugin/v2.json","type":"panel","name":"ARDMATRIX Topology Command Center","id":"ardmatrix-topology-panel","info":{"description":"Full-stack redundant data-center, Kubernetes and application topology","author":{"name":"ARDMATRIX"},"version":"1.2.0","updated":"2026-08-26"},"dependencies":{"grafanaDependency":">=11.0.0","plugins":[]}}

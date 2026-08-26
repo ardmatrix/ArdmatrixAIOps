@@ -123,6 +123,8 @@ services:
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_SERVER_INSTANCE_NAME: "ARDMATRIX AIOps"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/technical-operations-home.json
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: ardmatrix-inventory-hub-panel,ardmatrix-topology-panel
       POSTGRES_DB: ${POSTGRES_DB:-aiops}
       POSTGRES_USER: ${POSTGRES_USER:-aiops}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
@@ -132,6 +134,8 @@ services:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/plugins/ardmatrix-inventory-hub-panel:/var/lib/grafana/plugins/ardmatrix-inventory-hub-panel:ro
+      - ./grafana/plugins/ardmatrix-topology-panel:/var/lib/grafana/plugins/ardmatrix-topology-panel:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health"]
       interval: 10s
@@ -234,6 +238,133 @@ services:
     networks:
       - aiops
 
+  inventory-assistant:
+    build:
+      context: ./inventory-assistant
+    image: ardmatrix/inventory-assistant:local
+    container_name: ardmatrix-inventory-assistant
+    restart: unless-stopped
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aiops}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-aiops}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-5.4-mini}
+      LLM_REASONING_EFFORT: ${LLM_REASONING_EFFORT:-none}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      INVENTORY_ASSISTANT_MAX_COMPLETION_TOKENS: ${INVENTORY_ASSISTANT_MAX_COMPLETION_TOKENS:-256}
+      INVENTORY_ASSISTANT_MAX_ROWS: ${INVENTORY_ASSISTANT_MAX_ROWS:-50}
+    ports:
+      - "127.0.0.1:${INVENTORY_ASSISTANT_PORT:-8090}:8000"
+    volumes:
+      - ./assets/ardmatrix-aiops-logo-transparent.png:/app/app/static/ardmatrix-logo.png:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - aiops
+
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    container_name: ardmatrix-ollama
+    restart: unless-stopped
+    environment:
+      OLLAMA_KEEP_ALIVE: 5m
+      OLLAMA_MAX_LOADED_MODELS: 1
+      OLLAMA_NUM_PARALLEL: 1
+      OLLAMA_CONTEXT_LENGTH: 2048
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - aiops
+
+  ollama-init:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    container_name: ardmatrix-ollama-init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:2b}
+    entrypoint: ["/bin/sh", "-ec"]
+    command: ["ollama pull $${OLLAMA_MODEL}"]
+    restart: "no"
+    networks:
+      - aiops
+
+  server-metric-publisher:
+    build:
+      context: ./ingestion
+    image: ardmatrix/inventory-ingestion:local
+    container_name: ardmatrix-server-metric-publisher
+    restart: unless-stopped
+    command: ["python", "-m", "app.server_metric_publisher"]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aiops}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-aiops}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      SERVER_METRICS_TOPIC: server.metrics
+      SERVER_METRICS_INTERVAL: ${SERVER_METRICS_INTERVAL:-15}
+      METRICS_PORT: 8000
+    ports:
+      - "127.0.0.1:${SERVER_METRIC_PUBLISHER_PORT:-9104}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/metrics', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - aiops
+
+  server-metric-consumer:
+    image: ardmatrix/inventory-ingestion:local
+    container_name: ardmatrix-server-metric-consumer
+    restart: unless-stopped
+    command: ["python", "-m", "app.server_metric_consumer"]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      server-metric-publisher:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aiops}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-aiops}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      SERVER_METRICS_TOPIC: server.metrics
+      METRICS_PORT: 8000
+    ports:
+      - "127.0.0.1:${SERVER_METRIC_CONSUMER_PORT:-9105}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/metrics', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - aiops
+
 networks:
   aiops:
     name: ardmatrix-aiops
@@ -244,3 +375,4 @@ volumes:
   kafka-data:
   prometheus-data:
   grafana-data:
+  ollama-data:
