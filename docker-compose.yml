@@ -66,9 +66,10 @@ services:
     command:
       - |
         for topic in \
-            server.metrics network.metrics kubernetes.metrics application.metrics \
+            server.metrics vm.metrics network.metrics kubernetes.metrics application.metrics \
             inventory.events topology.events alerts.events anomalies.events \
-            ai.findings rca.events; do
+            ai.findings rca.events logs.system logs.application logs.network \
+            logs.security ingestion.errors; do
           /opt/kafka/bin/kafka-topics.sh \
             --bootstrap-server kafka:19092 \
             --create --if-not-exists \
@@ -77,6 +78,31 @@ services:
             --replication-factor 1
         done
     restart: "no"
+    networks:
+      - aiops
+
+  kafka-ui:
+    image: ${KAFKA_UI_IMAGE:-provectuslabs/kafka-ui:v0.7.2}
+    container_name: ardmatrix-kafka-ui
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_CLUSTERS_0_NAME: ARDMATRIX-AIOps
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
+      SERVER_PORT: 8080
+      JAVA_OPTS: -Xms128m -Xmx256m
+    ports:
+      - "127.0.0.1:${KAFKA_UI_PORT:-8085}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || wget -q --spider http://localhost:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
     networks:
       - aiops
 
@@ -124,7 +150,7 @@ services:
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_SERVER_INSTANCE_NAME: "ARDMATRIX AIOps"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/technical-operations-home.json
-      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: ardmatrix-inventory-hub-panel,ardmatrix-topology-panel
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: ardmatrix-inventory-hub-panel,ardmatrix-topology-panel,ardmatrix-dci-mesh-panel
       POSTGRES_DB: ${POSTGRES_DB:-aiops}
       POSTGRES_USER: ${POSTGRES_USER:-aiops}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
@@ -136,6 +162,7 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./grafana/plugins/ardmatrix-inventory-hub-panel:/var/lib/grafana/plugins/ardmatrix-inventory-hub-panel:ro
       - ./grafana/plugins/ardmatrix-topology-panel:/var/lib/grafana/plugins/ardmatrix-topology-panel:ro
+      - ./grafana/plugins/ardmatrix-dci-mesh-panel:/var/lib/grafana/plugins/ardmatrix-dci-mesh-panel:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health"]
       interval: 10s
@@ -201,6 +228,159 @@ services:
       METRICS_PORT: 8000
     ports:
       - "127.0.0.1:${INVENTORY_CONSUMER_METRICS_PORT:-9102}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/metrics', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - aiops
+
+  source-ingestion-api:
+    build:
+      context: ./ingestion
+    image: ardmatrix/inventory-ingestion:local
+    container_name: ardmatrix-source-ingestion-api
+    restart: unless-stopped
+    command: ["python", "-m", "app.source_gateway"]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aiops}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-aiops}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      SOURCE_INGESTION_PORT: 8000
+      SOURCE_API_TOKEN: ${SOURCE_API_TOKEN:-demo-local-token}
+    ports:
+      - "127.0.0.1:${SOURCE_INGESTION_PORT:-8091}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - aiops
+
+  source-file-watcher:
+    build:
+      context: ./ingestion
+    image: ardmatrix/inventory-ingestion:local
+    container_name: ardmatrix-source-file-watcher
+    restart: unless-stopped
+    command: ["python", "-m", "app.source_file_watcher"]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aiops}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-aiops}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      SOURCE_LANDING_ROOT: /landing
+      SOURCE_FILE_POLL_SECONDS: ${SOURCE_FILE_POLL_SECONDS:-3}
+      METRICS_PORT: 8000
+    ports:
+      - "127.0.0.1:${SOURCE_FILE_WATCHER_METRICS_PORT:-9106}:8000"
+    volumes:
+      - ./landing:/landing
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/metrics', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - aiops
+
+  kafka-traffic-simulator:
+    build:
+      context: ./ingestion
+    image: ardmatrix/inventory-ingestion:local
+    container_name: ardmatrix-kafka-traffic-simulator
+    restart: unless-stopped
+    command: ["python", "-m", "app.traffic_simulator"]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      source-ingestion-api:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aiops}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-aiops}
+      SOURCE_INGESTION_URL: http://source-ingestion-api:8000
+      SOURCE_API_TOKEN: ${SOURCE_API_TOKEN:-demo-local-token}
+      SIMULATOR_RUN_KEY: ${SIMULATOR_RUN_KEY:-customer-demo-10d-v1}
+      SIMULATOR_INTERVAL_SECONDS: ${SIMULATOR_INTERVAL_SECONDS:-900}
+      SIMULATOR_DURATION_DAYS: ${SIMULATOR_DURATION_DAYS:-10}
+      SIMULATOR_METRICS_PORT: 8000
+    ports:
+      - "127.0.0.1:${SIMULATOR_METRICS_PORT:-9107}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/metrics', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - aiops
+
+  ai-event-consumer:
+    build:
+      context: ./ingestion
+    image: ardmatrix/inventory-ingestion:local
+    container_name: ardmatrix-ai-event-consumer
+    restart: unless-stopped
+    command: ["python", "-m", "app.ai_event_consumer"]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aiops}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-aiops}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      AI_EVENT_CONSUMER_GROUP: ardmatrix-ai-event-store-v1
+      METRICS_PORT: 8000
+    ports:
+      - "127.0.0.1:${AI_EVENT_CONSUMER_METRICS_PORT:-9108}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/metrics', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - aiops
+
+  infrastructure-metric-consumer:
+    build:
+      context: ./ingestion
+    image: ardmatrix/inventory-ingestion:local
+    container_name: ardmatrix-infrastructure-metric-consumer
+    restart: unless-stopped
+    command: ["python", "-m", "app.infrastructure_metric_consumer"]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aiops}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-aiops}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      METRICS_PORT: 8000
+    ports:
+      - "127.0.0.1:${INFRASTRUCTURE_METRIC_CONSUMER_PORT:-9109}:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/metrics', timeout=2)"]
       interval: 10s

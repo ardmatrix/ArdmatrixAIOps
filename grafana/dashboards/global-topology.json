@@ -1,1 +1,134 @@
-{"annotations":{"list":[]},"editable":false,"id":null,"links":[{"title":"1 Overview","type":"link","keepTime":true,"url":"/d/ardmatrix-inventory-overview/data-center-inventory-overview?orgId=1&var-site=All"},{"title":"2 Data Centers","type":"link","keepTime":true,"url":"/d/ardmatrix-dc-inventory-detail/data-center-facility-overview?orgId=1&var-site=All"},{"title":"3 Racks","type":"link","keepTime":true,"url":"/d/ardmatrix-rack-inventory/rack-inventory-and-health?orgId=1&var-site=All&var-rack=All"},{"title":"4 Servers","type":"link","keepTime":true,"url":"/d/ardmatrix-server-inventory/server-inventory-and-health?orgId=1&var-site=All&var-rack=All&var-server=All"},{"title":"5 VMs","type":"link","keepTime":true,"url":"/d/ardmatrix-vm-inventory/virtual-machine-inventory-and-health?orgId=1&var-site=All&var-rack=All&var-server=All&var-vm=All"},{"title":"6 Kubernetes","type":"link","keepTime":true,"url":"/d/ardmatrix-kubernetes-inventory/kubernetes-inventory-and-health?orgId=1&var-site=All&var-cluster=All&var-namespace=All"},{"title":"7 Applications","type":"link","keepTime":true,"url":"/d/ardmatrix-application-inventory/application-and-business-service-inventory?orgId=1&var-site=All&var-application=All"},{"title":"8 Network","type":"link","keepTime":true,"url":"/d/ardmatrix-network-inventory/network-infrastructure-inventory-and-topology?orgId=1&var-site=All&var-device_type=All"},{"title":"9 Topology","type":"link","keepTime":true,"url":"/d/ardmatrix-global-topology/global-full-stack-data-center-topology?orgId=1"},{"title":"AIOps Expert","type":"link","targetBlank":true,"url":"http://localhost:8090/"}],"panels":[{"datasource":{"type":"postgres","uid":"timescaledb"},"fieldConfig":{"defaults":{},"overrides":[]},"gridPos":{"h":24,"w":24,"x":0,"y":0},"id":1,"options":{},"targets":[{"datasource":{"type":"postgres","uid":"timescaledb"},"format":"table","rawQuery":true,"rawSql":"SELECT 'global' AS \"Mode\",site_key AS \"Site Key\",site_name AS \"Data Center\",region AS \"Region\",initcap(health_status) AS \"Health\",core_switches AS \"Core Switches\",access_switches AS \"Access Switches\",servers AS \"Servers\",virtual_machines AS \"VMs\",k8s_clusters AS \"K8s Clusters\",k8s_nodes AS \"K8s Nodes\",k8s_pods AS \"Pods\",applications AS \"Applications\",dci_links AS \"DCI Links\",active_server_links AS \"Server Links\" FROM inventory.site_full_stack_topology_overview ORDER BY site_name","refId":"A"}],"transparent":true,"type":"ardmatrix-topology-panel"}],"refresh":"30s","schemaVersion":41,"tags":["ARDMATRIX","Topology","Global","Full Stack","Simulated"],"time":{"from":"now-15m","to":"now"},"timepicker":{"hidden":true},"timezone":"browser","title":"Global Full-Stack Data Center Topology","uid":"ardmatrix-global-topology","version":4}
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": false,
+  "id": null,
+  "links": [
+    {
+      "title": "1 Overview",
+      "type": "link",
+      "keepTime": true,
+      "url": "/d/ardmatrix-inventory-overview/data-center-inventory-overview?orgId=1&var-site=All"
+    },
+    {
+      "title": "2 Data Centers",
+      "type": "link",
+      "keepTime": true,
+      "url": "/d/ardmatrix-dc-inventory-detail/data-center-facility-overview?orgId=1&var-site=All"
+    },
+    {
+      "title": "3 Racks",
+      "type": "link",
+      "keepTime": true,
+      "url": "/d/ardmatrix-rack-inventory/rack-inventory-and-health?orgId=1&var-site=All&var-rack=All"
+    },
+    {
+      "title": "4 Servers",
+      "type": "link",
+      "keepTime": true,
+      "url": "/d/ardmatrix-server-inventory/server-inventory-and-health?orgId=1&var-site=All&var-rack=All&var-server=All"
+    },
+    {
+      "title": "5 VMs",
+      "type": "link",
+      "keepTime": true,
+      "url": "/d/ardmatrix-vm-inventory/virtual-machine-inventory-and-health?orgId=1&var-site=All&var-rack=All&var-server=All&var-vm=All"
+    },
+    {
+      "title": "6 Kubernetes",
+      "type": "link",
+      "keepTime": true,
+      "url": "/d/ardmatrix-kubernetes-inventory/kubernetes-inventory-and-health?orgId=1&var-site=All&var-cluster=All&var-namespace=All"
+    },
+    {
+      "title": "7 Applications",
+      "type": "link",
+      "keepTime": true,
+      "url": "/d/ardmatrix-application-inventory/application-and-business-service-inventory?orgId=1&var-site=All&var-application=All"
+    },
+    {
+      "title": "8 Network",
+      "type": "link",
+      "keepTime": true,
+      "url": "/d/ardmatrix-network-inventory/network-infrastructure-inventory-and-topology?orgId=1&var-site=All&var-device_type=All"
+    },
+    {
+      "title": "9 Topology",
+      "type": "link",
+      "keepTime": true,
+      "url": "/d/ardmatrix-global-topology/global-full-stack-data-center-topology?orgId=1"
+    },
+    {
+      "title": "AIOps Expert",
+      "type": "link",
+      "targetBlank": true,
+      "url": "http://localhost:8090/"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 20,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "refId": "nodes",
+          "rawSql": "SELECT site_key::text AS id,site_name AS title,region AS \"subTitle\",servers::text||' Servers · '||virtual_machines::text||' VMs' AS \"mainStat\",'WAN RTR A/B · '||dci_links::text||' DCI circuits · '||initcap(health_status) AS \"secondaryStat\",CASE WHEN health_status='healthy' THEN 1 ELSE 0.75 END AS \"arc__healthy\",CASE WHEN health_status='critical' THEN 1 ELSE 0 END AS \"arc__critical\",servers AS \"detail__Servers\",virtual_machines AS \"detail__Virtual Machines\",k8s_nodes AS \"detail__Kubernetes Nodes\",k8s_pods AS \"detail__Pods\",applications AS \"detail__Applications\" FROM inventory.site_full_stack_topology_overview WHERE site_key IN ('dc-chicago','dc-london','dc-singapore','dc-mumbai') ORDER BY site_name"
+        },
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "refId": "edges",
+          "rawSql": "SELECT link_key::text AS id,source_site_key::text AS source,target_site_key::text AS target,provider||' · '||round(bandwidth_bps/1000000000.0)::text||' Gbps' AS \"mainStat\",circuit_id||' · '||round(latency_ms,1)::text||' ms · '||initcap(status) AS \"secondaryStat\",CASE WHEN provider='Airtel' THEN '#22d3ee' ELSE '#a78bfa' END AS color FROM inventory.data_center_backbone_overview WHERE source_site_key IN ('dc-chicago','dc-london','dc-singapore','dc-mumbai') AND target_site_key IN ('dc-chicago','dc-london','dc-singapore','dc-mumbai') ORDER BY source_site_key,target_site_key,provider"
+        }
+      ],
+      "transparent": true,
+      "type": "ardmatrix-dci-mesh-panel",
+      "title": ""
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": [
+    "ARDMATRIX",
+    "Topology",
+    "Global",
+    "Full Stack",
+    "Simulated"
+  ],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": true
+  },
+  "timezone": "browser",
+  "title": "Global Four-Data-Center Redundant DCI Topology",
+  "uid": "ardmatrix-global-topology",
+  "version": 8
+}

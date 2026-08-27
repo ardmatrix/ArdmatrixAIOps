@@ -1,0 +1,66 @@
+{
+  "annotations":{"list":[]},
+  "editable":false,
+  "graphTooltip":1,
+  "id":null,
+  "links":[
+    {"icon":"external link","targetBlank":true,"title":"Open Kafka GUI","type":"link","url":"http://localhost:8085"},
+    {"icon":"database","title":"Simulator-Fed Servers","type":"link","url":"/d/ardmatrix-simulated-server-telemetry/simulator-fed-server-and-vm-telemetry?orgId=1"},
+    {"icon":"bolt","title":"AI Operations: Anomaly to RCA","type":"link","url":"/d/ardmatrix-ai-operations/ardmatrix-ai-operations?orgId=1"},
+    {"icon":"arrow-left","title":"NOC Command Center","type":"link","url":"/d/ardmatrix-technical-home/ardmatrix-noc-inventory-command-center?orgId=1&kiosk=1"}
+  ],
+  "panels":[
+    {
+      "gridPos":{"h":5,"w":24,"x":0,"y":0},"id":1,"type":"text","title":"ARDMATRIX Unified Ingestion Pipeline",
+      "options":{"mode":"markdown","content":"## CSV / JSON  ·  Telemetry  ·  SNMP  ·  APIs  ·  Logs\n\n### Collectors → Validate → Normalize → Enrich → **Kafka** → TimescaleDB / ML / Alerts / RCA → **Grafana & AIOps Expert**\n\nEvery record carries `schema_version`, `message_id`, `source_type`, `source_system`, `observed_at`, `site_id`, `asset_id`, `is_simulated`, labels and payload. Invalid inputs are quarantined and routed to `ingestion.errors`."}
+    },
+    {
+      "datasource":{"type":"postgres","uid":"timescaledb"},"gridPos":{"h":4,"w":6,"x":0,"y":5},"id":2,"type":"stat","title":"Published Events",
+      "fieldConfig":{"defaults":{"color":{"mode":"fixed","fixedColor":"green"},"unit":"short"}},"options":{"colorMode":"background","graphMode":"area","reduceOptions":{"calcs":["lastNotNull"],"values":false}},
+      "targets":[{"refId":"A","format":"table","rawQuery":true,"rawSql":"SELECT count(*) AS value FROM ingestion.source_events WHERE status='published' AND $__timeFilter(received_at)"}]
+    },
+    {
+      "datasource":{"type":"postgres","uid":"timescaledb"},"gridPos":{"h":4,"w":6,"x":6,"y":5},"id":3,"type":"stat","title":"Rejected Events",
+      "fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"red","value":1}]}}},"options":{"colorMode":"background","graphMode":"none","reduceOptions":{"calcs":["lastNotNull"],"values":false}},
+      "targets":[{"refId":"A","format":"table","rawQuery":true,"rawSql":"SELECT count(*) AS value FROM ingestion.source_events WHERE status='rejected' AND $__timeFilter(received_at)"}]
+    },
+    {
+      "datasource":{"type":"postgres","uid":"timescaledb"},"gridPos":{"h":4,"w":6,"x":12,"y":5},"id":4,"type":"stat","title":"Active Source Systems",
+      "fieldConfig":{"defaults":{"color":{"mode":"fixed","fixedColor":"blue"}}},"options":{"colorMode":"background","graphMode":"none","reduceOptions":{"calcs":["lastNotNull"],"values":false}},
+      "targets":[{"refId":"A","format":"table","rawQuery":true,"rawSql":"SELECT count(DISTINCT source_system) AS value FROM ingestion.source_events WHERE $__timeFilter(received_at)"}]
+    },
+    {
+      "datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"h":4,"w":6,"x":18,"y":5},"id":5,"type":"stat","title":"Pipeline Services Up",
+      "fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"thresholds":{"mode":"absolute","steps":[{"color":"red","value":null},{"color":"green","value":2}]}}},"options":{"colorMode":"background","graphMode":"none","reduceOptions":{"calcs":["lastNotNull"],"values":false}},
+      "targets":[{"refId":"A","expr":"sum(up{job=~\"source-ingestion-api|source-file-watcher\"})","legendFormat":"Services"}]
+    },
+    {
+      "datasource":{"type":"postgres","uid":"timescaledb"},"gridPos":{"h":8,"w":12,"x":0,"y":9},"id":6,"type":"timeseries","title":"Events by Source Type",
+      "fieldConfig":{"defaults":{"unit":"short"}},"options":{"legend":{"displayMode":"table","placement":"bottom","showLegend":true}},
+      "targets":[{"refId":"A","format":"time_series","rawQuery":true,"rawSql":"SELECT date_trunc('minute',received_at) AS time,source_type AS metric,count(*) AS value FROM ingestion.source_events WHERE $__timeFilter(received_at) AND status='published' GROUP BY 1,2 ORDER BY 1"}]
+    },
+    {
+      "datasource":{"type":"postgres","uid":"timescaledb"},"gridPos":{"h":8,"w":12,"x":12,"y":9},"id":7,"type":"barchart","title":"Events by Kafka Topic",
+      "options":{"legend":{"displayMode":"table","placement":"right","showLegend":true}},
+      "targets":[{"refId":"A","format":"table","rawQuery":true,"rawSql":"SELECT topic AS \"Topic\",count(*) AS \"Events\" FROM ingestion.source_events WHERE $__timeFilter(received_at) GROUP BY topic ORDER BY 2 DESC"}]
+    },
+    {
+      "datasource":{"type":"postgres","uid":"timescaledb"},"gridPos":{"h":9,"w":24,"x":0,"y":17},"id":8,"type":"table","title":"Source Health and Last Seen",
+      "fieldConfig":{"defaults":{"custom":{"filterable":true}}},"options":{"cellHeight":"sm","showHeader":true},
+      "targets":[{"refId":"A","format":"table","rawQuery":true,"rawSql":"SELECT source_type AS \"Source Type\",source_system AS \"Source System\",received AS \"Received\",published AS \"Published\",rejected AS \"Rejected\",last_received_at AS \"Last Received\",last_published_at AS \"Last Published\",coalesce(latest_error,'') AS \"Latest Error\" FROM ingestion.source_health ORDER BY last_received_at DESC"}]
+    },
+    {
+      "datasource":{"type":"postgres","uid":"timescaledb"},"gridPos":{"h":10,"w":24,"x":0,"y":26},"id":9,"type":"table","title":"Recent Normalized Events",
+      "fieldConfig":{"defaults":{"custom":{"filterable":true}}},"options":{"cellHeight":"sm","showHeader":true},
+      "targets":[{"refId":"A","format":"table","rawQuery":true,"rawSql":"SELECT received_at AS \"Received\",source_type AS \"Source\",source_system AS \"Source System\",topic AS \"Kafka Topic\",event_type AS \"Event Type\",coalesce(site_id,'') AS \"Site\",coalesce(asset_id,'') AS \"Asset\",CASE WHEN is_simulated THEN 'Simulated' ELSE 'Live' END AS \"Data Type\",status AS \"Status\" FROM ingestion.source_events WHERE $__timeFilter(received_at) ORDER BY received_at DESC LIMIT 200"}]
+    },
+    {
+      "datasource":{"type":"postgres","uid":"timescaledb"},"gridPos":{"h":6,"w":24,"x":0,"y":36},"id":10,"type":"table","title":"10-Day Kafka Traffic Simulator",
+      "fieldConfig":{"defaults":{"custom":{"filterable":true}}},"options":{"cellHeight":"sm","showHeader":true},
+      "targets":[{"refId":"A","format":"table","rawQuery":true,"rawSql":"SELECT run_key AS \"Simulation\",status AS \"Status\",started_at AS \"Started\",ends_at AS \"Ends\",interval_seconds/60 AS \"Interval Minutes\",batch_count AS \"Batches\",event_count AS \"Published Events\",error_count AS \"Errors\",last_emitted_at AS \"Last Batch\",greatest(0,round(extract(epoch FROM (ends_at-now()))/3600,1)) AS \"Hours Remaining\" FROM ingestion.simulator_runs ORDER BY started_at DESC"}]
+    }
+  ],
+  "refresh":"10s","schemaVersion":41,"tags":["ardmatrix","aiops","ingestion","kafka"],
+  "templating":{"list":[]},"time":{"from":"now-6h","to":"now"},"timepicker":{},"timezone":"browser",
+  "title":"ARDMATRIX Ingestion Pipeline & Health","uid":"ardmatrix-ingestion-health","version":2
+}

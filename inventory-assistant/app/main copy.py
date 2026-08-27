@@ -48,7 +48,7 @@ def fast_inventory_answer(question: str) -> ChatResponse | None:
     """Answer common operational questions without an expensive LLM round trip."""
     text = question.casefold()
     wants_dci_connectivity = any(term in text for term in (
-        "dci", "dc to dc", "dc-to-dc", "data center connectivity", "data-center connectivity", "datacenter connectivity",
+        "dci", "dc to dc", "data center connectivity", "datacenter connectivity",
         "cross connected", "wan circuit", "carrier path", "full mesh"
     ))
     if wants_dci_connectivity:
@@ -85,7 +85,7 @@ def fast_inventory_answer(question: str) -> ChatResponse | None:
         "connectivity", "connected", "switch port", "network path", "network device", "which switch"
     ))
     if wants_server_connectivity:
-        match = re.search(r"\b(?:dc-[a-z0-9-]+-srv-[0-9]+|(?:tech-)?srv-[a-z0-9-]+)\b", text)
+        match = re.search(r"\b(?:tech-)?srv-[a-z0-9-]+\b", text)
         if not match:
             return ChatResponse(
                 answer=("Yes. Provide a server key, for example `srv-bengaluru-01-01`. I can return its server NIC, "
@@ -534,6 +534,13 @@ SEMANTIC_ENTITIES: dict[str, dict[str, Any]] = {
                    "bandwidth_bps","utilization_pct","latency_ms","packet_loss_pct","status",
                    "redundancy_group","last_seen_at","is_simulated"],
     },
+    "site_topology": {
+        "source": "inventory.site_full_stack_topology_overview",
+        "fields": ["site_key","site_name","region","health_status",
+                   "core_switches","access_switches","servers","virtual_machines",
+                   "k8s_clusters","k8s_nodes","k8s_pods","applications",
+                   "dci_links","active_server_links","is_simulated"],
+    },
 }
 
 
@@ -638,7 +645,7 @@ TOOLS = [{
         "parameters": {
             "type": "object",
             "properties": {
-                "operation": {"type": "string", "enum": ["summary","sites","racks","servers","virtual_machines","kubernetes","applications","alerts","search","server_vendors","server_models","pod_health","server_connectivity","connectivity_paths","dci_connectivity"]},
+                "operation": {"type": "string", "enum": ["summary","sites","racks","servers","virtual_machines","kubernetes","applications","alerts","search","server_vendors","server_models","pod_health","server_connectivity","connectivity_paths"]},
                 "site_key": {"type": ["string","null"]},
                 "rack_key": {"type": ["string","null"]},
                 "server_key": {"type": ["string","null"]},
@@ -664,22 +671,24 @@ TOOLS = [{
             "site_key,rack_key,server_key,physical_host,vm_key,name,health_status,status,environment,criticality,"
             "vcpu_count,memory_bytes,cpu_utilization_pct,memory_utilization_pct,storage_utilization_pct,backup_status,"
             "operating_system,open_alerts,owner); kubernetes_pods(site_key,cluster_key,cluster_name,namespace,workload,"
-            "pod_name,phase,node_name,qos_class,last_seen_at); applications("
+            "pod_name,phase,node_name,qos_class,last_seen_at); applications("             " site_full_stack_topology as site_topology(site_key,site_name,region,health_status,"
+            "core_switches,access_switches,servers,virtual_machines,k8s_clusters,k8s_nodes,"
+            "k8s_pods,applications,dci_links,active_server_links). One row per data center "
+            "summarizing the full stack; use it for per-site counts, cross-site comparisons, "
+            "and totals such as sum servers across sites or group_by region."
             "site_key,application_key,application,application_type,environment,criticality,status,owner,business_service); "
             "alerts(entity_type,severity,status,title,metric_name,metric_value,threshold_value,opened_at); "
             "server_connectivity(site_key,server_key,server_name,rack_name,server_interface,mac_address,"
             "server_ip_addresses,switch_name,switch_interface,switch_vendor,switch_model,vlan_id,vlan_name,vrf_name,"
             "cidr,gateway,connection_status,upstream_core_01,upstream_core_02,upstream_firewall,upstream_router); "
+            "entity": {"type": "string", "enum": ["data_centers","racks","servers","virtual_machines","kubernetes_pods","applications","alerts","server_connectivity","connectivity_paths","site_topology"]},
             "connectivity_paths(site_key,router,firewall,l3_switch,vlan_id,vrf_name,cidr,server_key,server_name,"
-            "vm_name,cluster_key,k8s_node,pod_name,pod_phase,application_name,business_service,path_status); "
-            "dci_connectivity(source_site_key,source_site,source_core,source_interface,target_site_key,target_site,"
-            "target_core,target_interface,provider,circuit_id,bandwidth_bps,utilization_pct,latency_ms,"
-            "packet_loss_pct,status,redundancy_group,last_seen_at)."
+            "vm_name,cluster_key,k8s_node,pod_name,pod_phase,application_name,business_service,path_status)."
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "entity": {"type": "string", "enum": ["data_centers","racks","servers","virtual_machines","kubernetes_pods","applications","alerts","server_connectivity","connectivity_paths","dci_connectivity"]},
+                "entity": {"type": "string", "enum": ["data_centers","racks","servers","virtual_machines","kubernetes_pods","applications","alerts","server_connectivity","connectivity_paths"]},
                 "mode": {"type": "string", "enum": ["list","aggregate"]},
                 "fields": {"type": "array", "items": {"type": "string"}},
                 "group_by": {"type": "array", "items": {"type": "string"}},
@@ -710,10 +719,7 @@ instructions to correct the arguments and retry. Never invent counts, state, own
 or relationships. State when results are simulated and mention truncation. Answer the exact requested scope; do not
 replace a requested list with a summary. Ask one concise clarification only when the user's meaning is genuinely
 ambiguous after using available evidence. Keep answers concise and use clear units. Do not expose SQL, credentials,
-UUIDs, tool schemas, or implementation details. For topology questions, include the known path layers and exact port
-terminations. For DCI questions, distinguish both carrier-diverse circuits and their WAN routers/interfaces. For server
-connectivity, include every returned redundant NIC attachment rather than only one path. The tools are read-only and
-already enforce authorization boundaries."""
+UUIDs, tool schemas, or implementation details. The tools are read-only and already enforce authorization boundaries."""
 
 
 @app.get("/health")

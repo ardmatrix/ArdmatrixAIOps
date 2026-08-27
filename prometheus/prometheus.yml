@@ -23,6 +23,26 @@ scrape_configs:
     static_configs:
       - targets: ["inventory-consumer:8000"]
 
+  - job_name: source-ingestion-api
+    static_configs:
+      - targets: ["source-ingestion-api:8000"]
+
+  - job_name: source-file-watcher
+    static_configs:
+      - targets: ["source-file-watcher:8000"]
+
+  - job_name: kafka-traffic-simulator
+    static_configs:
+      - targets: ["kafka-traffic-simulator:8000"]
+
+  - job_name: ai-event-consumer
+    static_configs:
+      - targets: ["ai-event-consumer:8000"]
+
+  - job_name: infrastructure-metric-consumer
+    static_configs:
+      - targets: ["infrastructure-metric-consumer:8000"]
+
   - job_name: server-metric-publisher
     static_configs:
       - targets: ["server-metric-publisher:8000"]

@@ -21,12 +21,14 @@
 <div class="shell">
   <header><div class="brand"><img src="/static/ardmatrix-logo.png" alt="ARDMATRIX"><h1>AIOps Expert <span class="tag">GPT-5.4 MINI</span></h1></div><div class="status"><span class="dot" id="dot"></span><span id="health">Checking services…</span></div></header>
   <main>
-    <div id="messages"><div class="msg assistant">Hello, I’m AIOps Expert. Ask me about data centers, racks, servers, VMs, Kubernetes, applications, health, or inventory alerts.<div class="meta">Answers are checked against the read-only inventory database.</div></div></div>
+    <div id="messages"><div class="msg assistant">Hello, I’m AIOps Expert. Ask me about inventory, health, DCI topology, WAN circuits, switch ports, server NICs, VLANs, Kubernetes or applications.<div class="meta">Answers are checked against the read-only inventory and topology database.</div></div></div>
     <div class="suggestions">
       <button data-q="Give me the complete inventory summary">Inventory summary</button>
       <button data-q="Which data centers have critical health or open alerts?">Critical data centers</button>
       <button data-q="Show Kubernetes cluster and pod health">Kubernetes health</button>
       <button data-q="List critical applications and their business services">Critical applications</button>
+      <button data-q="Show all DC-to-DC links with WAN routers, interfaces, carriers and circuit health">DCI topology</button>
+      <button data-q="Which switch ports and server NICs connect server dc-chicago-rack-02-srv-09?">Server port path</button>
     </div>
     <form id="form"><textarea id="question" required minlength="2" maxlength="2000" placeholder="Ask an inventory question…"></textarea><button type="submit" id="send">Ask</button></form>
   </main>

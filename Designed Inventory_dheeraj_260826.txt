@@ -51,3 +51,53 @@ es. The Kubernetes inventory currently uses:
 - 24 Kubernetes nodes — 6 per data center, 3 nodes per cluster
 - 72 pods — 3 pods per node
 - 96 containers — main containers plus 24 Envoy sidecars
+
+
+afka
+├── Database consumer → TimescaleDB
+├── Inventory consumer → inventory tables
+├── Topology consumer → dependency and connectivity tables
+├── ML consumer → anomalies.events
+├── Alert consumer → alerts.events
+├── Correlation service → incidents
+├── RCA service → rca.events
+└── AI assistant → approved read-only database queries
+
+
+Recommended Kafka topic structure
+Your current topics cover the main platform:
+server.metrics
+network.metrics
+kubernetes.metrics
+application.metrics
+inventory.events
+topology.events
+alerts.events
+anomalies.events
+ai.findings
+rca.events
+
+
+1. Data-source ingestion
+Source	Ingestion method	Example
+CSV/JSON	Landing-zone file watcher	Server inventory, rack data
+SNMP	SNMP polling and traps	Switch ports, CPU, link status
+APIs	Scheduled polling or webhooks	VMware, Kubernetes, applications
+Telemetry	Exporters and custom collectors	CPU, RAM, storage, latency
+Logs	Fluent Bit or Vector	System, application and network logs
+
+
+---list of servers simulated data 
+
+dc-chicago-srv-001
+dc-chicago-srv-002
+
+dc-london-srv-001
+dc-london-srv-002
+
+dc-singapore-srv-001
+dc-singapore-srv-002
+
+dc-mumbai-srv-001
+dc-mumbai-srv-002
+

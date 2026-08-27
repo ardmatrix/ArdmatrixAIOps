@@ -29,6 +29,11 @@ def stop_service(*_: object) -> None:
 
 
 def store(connection: psycopg.Connection[object], event: dict[str, object]) -> None:
+    # Source-agnostic normalized envelopes are handled by
+    # infrastructure_metric_consumer. This consumer retains compatibility with
+    # the original rich server-metric publisher schema.
+    if "metrics" not in event:
+        return
     metrics = event["metrics"]
     assert isinstance(metrics, dict)
     connection.execute(
